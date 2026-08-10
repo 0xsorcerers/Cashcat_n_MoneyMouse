@@ -1,0 +1,53 @@
+.carousel-container {
+    width: 100vw;
+    height: 30vh;
+    background: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    perspective: 1000px;
+    position: relative;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease-in-out, transform 0.5s ease-in-out;
+  }
+  
+  .carousel-container.fade-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  .carousel-container.fade-out {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  .carousel-track {
+    display: flex;
+    animation: scroll 20s linear infinite;
+  }
+  
+  .carousel-track img {
+    height: 25vh;
+    width: auto;
+    object-fit: contain;
+    margin: 2vh 2rem; /* vertical margin = top/bottom space, horizontal spacing */
+    transform: translateZ(0);
+    backface-visibility: hidden;
+  }
+  
+  @keyframes scroll {
+    0% {
+      transform: translate3d(0, 0, 0);
+    }
+    100% {
+      transform: translate3d(-50%, 0, 0);
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .carousel-container {
+      top: 0vw;
+    }
+  }
+  

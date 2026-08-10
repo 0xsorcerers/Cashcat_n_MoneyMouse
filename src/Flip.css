@@ -1,0 +1,224 @@
+
+.full-container {
+  height: 100vh;
+  width: 100vw;
+  /* background-color: black; */
+  overflow: hidden;
+}
+
+.gallery-container {
+  min-height: 100vh;
+  min-width: 95vw;
+  height: auto;
+  max-width: 96vw;
+  aspect-ratio: 16/9;
+  display: grid;
+  grid-template-columns: repeat(var(--columns), 1fr);
+  grid-template-rows: repeat(var(--rows), 1fr);
+  gap: 10px;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border: 1px solid goldenrod;
+  z-index: 1;
+}
+
+.flip-box {
+  background-color: transparent;
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+.flip-box-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.8s;
+  transform-style: preserve-3d;
+}
+
+.flip-box.flipped .flip-box-inner {
+  transform: rotateY(180deg);
+}
+
+.flip-box-front, .flip-box-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 4px;
+}
+
+.flip-box-front {
+  background-color: #fff;
+  border: 1px solid #ddd;
+}
+
+.flip-box-back {
+  background-color: #f8f8f8;
+  transform: rotateY(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.flip-box-back img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.hero {
+  position: fixed;
+  aspect-ratio: 16/9;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: auto;
+}
+
+.fullcover {
+  width: 100vw;
+  height: 100vh;        
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: black;
+  background-size: 100%;
+  background-image: url('./assets/images/background.webp');
+  background-repeat: no-repeat;
+}
+
+.nofullcover {
+  width: 100vw;
+  height: 100vh;        
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: black;
+  background-repeat: no-repeat;
+}
+
+.starter {
+  position: absolute;
+  top: 75%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 1.2rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 2px;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  background: linear-gradient(180deg, #1e1e1eee, #111111ee);
+  border-radius: 20px;
+  box-shadow: 0 0 18px rgba(0, 255, 255, 0.35), inset 0 0 12px rgba(0, 255, 255, 0.25);
+  text-shadow: 0 0 10px cyan;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+  z-index: 3;
+  opacity: 0.75;
+  font-family: 'BabyVintage';
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+
+  /* Base neon glow */
+  box-shadow:
+    0 0 12px rgba(0, 255, 255, 0.4),
+    inset 0 0 8px rgba(0, 255, 255, 0.25);
+
+  /* Repeating pulse every 3s */
+  animation: energyPulse 3s ease-out infinite;
+  transform-style: preserve-3d; /* Helps with 3D feel */
+}
+
+/* Stop the pulse while hovered so user gets a clean reaction */
+.starter:hover {
+  animation: none;
+  transform: translateX(-50%) translateY(-6px) scale(1.05) perspective(600px)
+    rotateX(4deg);
+  box-shadow:
+    0 0 24px rgba(0, 255, 255, 0.7),
+    inset 0 0 16px rgba(0, 255, 255, 0.4);
+}
+
+/* Pulsating glow wave */
+@keyframes energyPulse {
+  0% {
+    box-shadow:
+      0 0 12px rgba(0, 255, 255, 0.4),
+      inset 0 0 8px rgba(0, 255, 255, 0.25);
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* Peak of the pulse */
+  30% {
+    box-shadow:
+      0 0 40px rgba(0, 255, 255, 1),     /* outer glow */
+      0 0 90px rgba(0, 255, 255, 0.5),   /* farther halo */
+      0 0 140px rgba(0, 255, 255, 0.25), /* cosmic energy ring */
+      inset 0 0 30px rgba(0, 255, 255, 0.6);
+    transform: translateX(-50%) scale(1.06);
+  }
+
+  /* Dissipate the pulse */
+  55% {
+    box-shadow:
+      0 0 24px rgba(0, 255, 255, 0.6),
+      0 0 60px rgba(0, 255, 255, 0.25),
+      inset 0 0 16px rgba(0, 255, 255, 0.35);
+    transform: translateX(-50%) scale(1.02);
+  }
+
+  100% {
+    box-shadow:
+      0 0 12px rgba(0, 255, 255, 0.4),
+      inset 0 0 8px rgba(0, 255, 255, 0.25);
+    transform: translateX(-50%) scale(1);
+  }
+}
+
+.z10 {
+  z-index: 10;
+}
+.z20 {
+  z-index: 20;
+}
+.z30 {
+  z-index: 30;
+}
+.z40 {
+  z-index: 40;
+}
+.z50 {
+  z-index: 50;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .gallery-container {
+    gap: 8px;
+    padding: 8px;
+    max-width: 95vw;
+  }
+  
+  .flip-box {
+    /* Optional: Adjust perspective for smaller screens */
+    perspective: 800px;
+  }
+
+  .fullcover {
+    background-size: cover;
+    background-position: top;
+  }
+
+  .nofullcover {
+    background-size: cover;
+    background-position: top;
+  }
+}

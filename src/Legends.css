@@ -1,0 +1,1081 @@
+.legends-container {
+  position: fixed;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  aspect-ratio: 16/9;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.centrify {
+    position: fixed;
+    height: 100vh;
+    width: 100vw;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 30;
+}
+
+.character {
+  position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  top: 2vh;
+  height: 65vh;
+  width: 99.5vw;
+  /* border: 0.25vh solid #fff; */
+  text-align: left;
+  z-index: 15;
+  margin: 0.25vw;
+}
+
+.opponent {
+  position: fixed;
+  top: 0vh;
+  right: 0vw;
+  height: calc(100vh - 18vh);
+  width: 100vw;
+  /* border: 0.25vh solid lime; */
+  text-align: right;
+}
+
+.characterImage {
+  position: fixed;
+  top: 2vh;
+  height: 65vh;
+  width: auto;
+  /* border-radius: 5vh; */
+}
+
+.index10 {
+  left: 2vw;
+  z-index: 1;
+  /* border: 1px solid salmon; */
+}
+
+.index11 {
+  z-index: 1;
+  left: 29vw;
+  /* background-color: aquamarine; */
+}
+
+.index12 {
+  z-index: 0;
+  left: 62vw;
+}
+
+.index13 {
+  z-index: 20;
+  opacity: 0.85;
+}
+
+.centered {
+  position: absolute;
+  top: 50vh;
+  left: 42vw;
+}
+
+.mainlink {
+  position: fixed;
+  top: 92vh;
+  left: 43vw;
+  z-index: 50;
+  text-decoration: none;
+}
+
+.vs {
+  position: fixed;
+  top: 10vh;
+  left: 25vw;
+  color: maroon;
+  font-family: "BabyVintage";
+  font-size: 20vh;
+  z-index: 15;
+}
+
+.vsImage {
+  height: auto;
+  width: 45%;
+}
+
+.nftDisplay {
+  background-color: black;
+  opacity: 0.9;
+  z-index: 40;
+}
+
+.nftTitle {
+  margin-top: 2vh;
+  height: 6vh;
+  font-size: auto;
+  font-family: 'BabyVintage';
+  color: hotpink;
+}
+
+.nftDisplayImage {
+  height: 82vh;
+  width: auto;
+}
+
+.nftImage {
+  position: fixed;
+  bottom: 10vh;
+  left: 1vw;
+  height: auto;
+  width: 8vw;
+  border-radius: 2.5vh;
+  border: 0.75vh double whitesmoke;
+  z-index: 2;
+  cursor: pointer; 
+}
+
+.nftText {
+  position: fixed;
+  bottom: 5vh;
+  left: 1vw;
+  width: 8.5vw;
+  height: 25vh;
+  border-radius: 5vh;
+  border: 0.75vh solid rgb(30, 28, 28);
+  z-index: 2;
+  color: gold;
+  background-color: black;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: "BabyVintage";
+}
+
+.panel {
+  position: fixed;
+  bottom: 17vh;
+  left: 11vw;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  width: 87vw;
+  height: 11vh;
+  border: 0.75vh double gray;
+  border-radius: 2vh;
+  padding: 1vh;
+  background-color: black;
+  opacity: 0.85;
+}
+
+.selectedImage {
+  height: 4vw;
+  width: 4vw;
+  cursor: pointer;
+}.selectedImage:hover {
+  transform: scale(1.2);
+}.selectedImage:active {
+  transform: scale(1.2);
+}
+
+.tray {
+  position: fixed;
+  color: white;
+  font-size: 4vh;
+  font-family: "Cakecafe";
+  bottom: 0vw;
+  left: 0vw;
+  display: flex;
+  height: 16vh;
+  width: 100vw;
+  border: 0.75vh solid #000;
+  background: linear-gradient(to bottom, gray 0%, rgb(53, 51, 51) 50%, black 100%);
+  z-index: 1;
+}
+
+.dashboard {
+  width: 20vw;
+  height: 10vh;
+  text-align: center;
+}
+
+.scoreboard {
+  margin-top: 2vh;
+  width: 60vw;
+  height: 10vh;
+  text-align: center;
+  margin-bottom: 2vh;
+}
+
+.partition {
+  width: 4vw;
+  height: 10vh;
+  text-align: center;
+  margin-bottom: 2vh;
+  font-family: "Cakecafe";
+}
+
+.button-board {
+  width: 20vw;
+  height: 10vh;
+  text-align: center;
+}
+
+.goldtext {
+  font-family: "Cakecafe";
+  font-size: 4vh;
+}
+
+.legend-button {
+  font-family: "Cakecafe";
+  font-size: large;
+  background-color: gold;
+  height: 90%;
+  margin-bottom: 0.25vh;
+  border-radius: 4vh;
+  padding: 0vh 5vh;
+  border: 0.75vh solid black;
+}.legend-button:active{  
+  color: goldenrod;
+  transform: scale(0.98); 
+  box-shadow: 3px 2px 22px 1px rgba(212, 168, 11, 0.8); 
+  border: 1vh solid wheat;
+}
+
+.trade-button {
+  font-family: "Cakecafe";
+  font-size: large;
+  background-color: hotpink;
+  height: 8vh;
+  margin: 1vh 0;
+  border-radius: 4vh;
+  padding: 0vh 5vh;
+  border: 0.75vh solid black;
+  cursor: pointer;
+}.trade-button:hover{  
+  color: whitesmoke;
+  background-color: magenta;
+  transform: scale(0.98); 
+  box-shadow: 3px 2px 22px 1px rgba(157, 11, 101, 0.8); 
+  border: 1vh solid rgb(42, 2, 37);
+}.trade-button:active{  
+  color: whitesmoke;
+  background-color: magenta;
+  transform: scale(0.98); 
+  box-shadow: 3px 2px 22px 1px rgba(157, 11, 101, 0.8); 
+  border: 1vh solid rgb(42, 2, 37);
+}
+
+.notificationscancel {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  top: 20vh;
+  right: 5vw;
+  z-index: 500;
+  width: auto;
+}.notificationscancel:hover {
+  border-radius: 2vh;
+  background-color: rgba(224, 19, 146, 0.8);
+  box-shadow: 4px 4px 8px 4px rgba(78, 3, 50, 0.9);
+  transition: all 0.3s ease;
+}
+
+.cancelled {  
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(198, 7, 7, 0.9));
+  box-shadow: 4px 4px 8px 4px rgba(243, 105, 108, 0.9);
+  border: 2px solid maroon;
+}
+
+.heroText {
+  position: fixed;
+  top: 4vh;
+  left: 17vw;
+  color: white;
+  text-shadow: 4px 4px 8px rgb(0, 0, 0);
+  font-family: "Cakecafe";
+  font-size: x-large;
+  z-index: 15;
+}
+
+.villainText {
+  position: fixed;
+  top: 59vh;
+  right: 7vw;
+  color: black;
+  text-shadow: 4px 4px 8px rgb(255, 255, 255);
+  font-family: "Cakecafe";
+  font-size: x-large;
+  z-index: 15;
+}
+
+.heroName {
+  position: fixed;
+  top: 59vh;
+  left: 4vw;
+  color: gold;
+  text-shadow: 5px 5px 8px 14px rgba(0, 0, 0, 1);
+  font-family: "WhisperingSignature";
+  font-size: x-large;
+  z-index: 15;
+  opacity: 0.7;
+}
+
+.villainName {
+  position: fixed;
+  top: 57vh;
+  left: 32vw;
+  color: wheat;
+  text-shadow: 5px 5px 8px 14px rgba(0, 0, 0, 1);
+  font-family: "WhisperingSignature";
+  font-size: xx-large;
+  z-index: 15;
+}
+
+.balloons {
+  position: fixed;
+  top: 85vh;
+  left: 14vw;
+  height: auto;
+  width: auto;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh;
+  font-family: "Cakecafe";
+  font-size: large;
+  text-align: center;
+  background-color: gold;
+  border: 0.25vh solid goldenrod;
+  border-radius: 2vh;
+  background-image: url("./assets/images/balloons.gif");
+  background-size: contain;
+  background-position: center;
+  z-index: 3;
+}
+
+.smaller {
+    font-size: xx-small;
+}
+
+.notallowed {
+    cursor: not-allowed;
+}
+
+.prizewinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: large;
+  font-family: 'BabyVintage';
+  background-image: url('./assets/images/prizewinner.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  z-index: 400;
+  cursor: pointer;
+}
+
+.prizewinner {
+  height: auto;
+  width: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: cornflowerblue;
+  font-family: "Cakecafe";
+  font-size: xx-large;
+  padding: 2vh;
+  text-align: center;
+  flex-direction: column;
+  background-image: url('./assets/images/prizewinner.gif');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-color: transparent;
+  opacity: 0.9;
+}
+
+.ledger {
+  font-size: large;
+  font-family: 'Cakecafe';
+}
+
+.speechText {
+  font-family: 'Cakecafe';
+  opacity: 0.9;
+}
+
+.imageBubble1 {
+  position: fixed;
+  top: 1vh;
+  left: 33.5vw;
+  width: 15vw;
+  height: auto;
+  border: 1px solid lime;
+}
+
+.bubble1 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 7.5vw;
+  height: 13vh;
+  margin-top: 3.5vh;
+  margin-left: 1.7vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubble2 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 10vw;
+  height: 11vh;
+  margin-top: 8.5vh;
+  margin-left: 18.2vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubble3 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 6.5vw;
+  height: 13vh;
+  margin-top: 27.5vh;
+  margin-left: 21vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubble4 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 5vw;
+  height: 9vh;
+  margin-top: 52.5vh;
+  margin-left: 19.5vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubble5 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 12vw;
+  height: 9.5vh;
+  margin-top: 53.5vh;
+  margin-left: 2.5vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubble6 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 10.5vw;
+  height: 6.5vh;
+  margin-top: 45.5vh;
+  margin-left: 1vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubblenoob1 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 7.5vw;
+  height: 13vh;
+  margin-top: 3.5vh;
+  margin-left: 1.7vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+
+.bubblenoob2 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 8vw;
+  height: 11vh;
+  margin-top: 11vh;
+  margin-left: 20vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubblenoob3 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 10.5vw;
+  height: 9vh;
+  margin-top: 42vh;
+  margin-left: 1vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubblenoob4 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 6vw;
+  height: 10vh;
+  margin-top: 52vh;
+  margin-left: 18.5vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubblenoob5 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 9vw;
+  height: 8vh;
+  margin-top: 53.5vh;
+  margin-left: 1.7vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.bubblenoob6 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 10vw;
+  height: 8vh;
+  margin-top: 31vh;
+  margin-left: 1.2vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.replybubble1 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 7.5vw;
+  height: 11vh;
+  margin-top: 2.25vh;
+  margin-left: 7vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.replybubble2 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 9vw;
+  height: 10vh;
+  margin-top: 21.5vh;
+  margin-left: 27.75vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.replybubble3 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 9vw;
+  height: 9.5vh;
+  margin-top: 40.5vh;
+  margin-left: 3.75vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.replybubble4 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 8.5vw;
+  height: 17vh;
+  margin-top: 44.5vh;
+  margin-left: 3.5vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.replybubble5 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 15vw;
+  height: 8.5vh;
+  margin-top: 54.5vh;
+  margin-left: 1.5vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+.replybubble6 {
+  display: flex;
+  flex-wrap: wrap;
+  width: 9vw;
+  height: 11vh;
+  margin-top: 49.5vh;
+  margin-left: 21.5vw;
+  text-align: center;
+  vertical-align: middle;
+  align-items: center;
+  justify-content: center;
+  font-size: auto;
+}
+
+@media only screen and (max-width: 768px) {
+  .ledger {
+    font-size: small;
+  }
+  .prizewinner {
+    height: auto;
+    width: 100vw;
+  }
+  .characterImage {
+    top: 9vh;
+    height: auto;
+    width: 62vw;
+  }
+  .index11{
+    top:  30vh;
+    left: 44vw;
+    width: 56vw;
+  }
+  .index12 {
+    top:  45vh;
+    left: 2vw;
+    width: 68vw;
+  }
+  .vs {
+    top: 15vh;
+    left: 37vw; 
+  }
+  .heroText {
+    top: 11vh;
+    left: 27vw;
+    font-size: medium;
+  }
+  .heroName {
+    top: 39vh;
+    left: 6vw;
+    font-size: medium;
+  }
+  .villainText {
+    top: 62vh;
+    left: 10vw;
+    font-size: medium;
+  }
+  .villainName {
+    top: 52vh;
+    left: 63vw;
+    font-size: large;
+    z-index: 15;
+  }
+  .nftImage {
+    bottom: 11.5vh;
+    height: auto;
+    width: 15vw;
+    border-radius: 2vh;
+    left: 1vw;
+  }
+  .nftText {
+    bottom: 10vh;
+    height: 10vh;
+    width: 15vw;
+    border-radius: 2vh;
+    left: 1vw;
+  }
+  .panel {
+    bottom: 10vh;
+    left: 20vw;
+    width: 73vw;
+    height: 10vh;
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    opacity: 0.8;
+    justify-content: center;
+    background-color: #000;
+  }
+  .selectedImage {
+    height: 7vw;
+    width: 7vw;
+    cursor: pointer;
+    border: 1px solid black;
+  }
+  .tray {
+    border: 0;
+    border-top: 1vh solid black;
+    border-bottom: 1vh solid black;
+    height: 8vh;
+  }
+  .scoreboard {
+    font-size: large;
+    width: 50vw;
+    margin-top: 1vh;
+  }
+  .goldtext {
+    font-size: large;
+  }
+  .fontSmall {
+    font-size: small;
+  }
+  .button-board {
+    width: 30vw;
+  }
+  .legend-button {
+    font-size: auto;
+    height: auto;
+    width: 100%;
+    text-align: center;
+    border: 0.25vh solid;
+    padding: 1vh;
+    margin: 0;
+  }
+  .balloons {
+    top: 91vh;
+    left: 1vw;
+    font-size: small;
+    height: auto;
+    width: 20vw;
+    padding: 0.25vw;
+    margin-top: 1vh;
+  }
+  .tadhigh {
+    top: 65vh;
+    width: 66vw;
+  }
+  .higher {
+    top: 43vh;
+  }
+  .larger {
+    font-size: xx-small;
+  }
+  .villany {
+    left: 54vw;
+    width: 42vw;
+  }
+  .mainlink {
+    top: 9.5vh;
+    left: 68vw;
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    width: 30vw;
+    font-size: small;
+    opacity: 0.8;
+  }
+  .bubble1 {
+    width: 16vw;
+    height: 5.4vh;
+    margin-top: 2.5vh;
+    margin-left: 2.1vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    padding: 2vh 1.5vw;
+  }
+  .bubble2 {
+    width: 19vw;
+    height: 6vh;
+    margin-top: 4.5vh;
+    margin-left: 35vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubble3 {
+    width: 15vw;
+    height: 6vh;
+    margin-top: 15.5vh;
+    margin-left: 39.5vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubble4 {
+    width: 10.5vw;
+    height: 6vh;
+    margin-top: 27.5vh;
+    margin-left: 37vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubble5 {
+    width: 22vw;
+    height: 4vh;
+    margin-top: 29.5vh;
+    margin-left: 5vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubble6 {
+    width: 20vw;
+    height: 3.8vh;
+    margin-top: 24.5vh;
+    margin-left: 2vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubblenoob1 {
+    width: 16vw;
+    height: 5.4vh;
+    margin-top: 2.5vh;
+    margin-left: 2.5vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubblenoob2 {
+    width: 18vw;
+    height: 6vh;
+    margin-top: 6vh;
+    margin-left: 37.5vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubblenoob3 {
+    width: 19vw;
+    height: 4.5vh;
+    margin-top: 22.5vh;
+    margin-left: 2vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubblenoob4 {
+    width: 11vw;
+    height: 5vh;
+    margin-top: 28vh;
+    margin-left: 36vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubblenoob5 {
+    width: 18vw;
+    height: 4.3vh;
+    margin-top: 29vh;
+    margin-left: 2.5vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .bubblenoob6 {
+    width: 19vw;
+    height: 4.5vh;
+    margin-top: 16.5vh;
+    margin-left: 2vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: whitesmoke;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .replybubble1 {
+    width: 13vw;
+    height: auto;
+    margin-top: 0.5vh;
+    margin-left: 8.5vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: pink;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .replybubble2 {
+    width: 13vw;
+    height: auto;
+    margin-top: 9.5vh;
+    margin-left: 41vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: pink;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .replybubble3 {
+    width: 14vw;
+    height: auto;
+    margin-top: 16.7vh;
+    margin-left: 4.75vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: pink;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .replybubble4 {
+    width: 10.5vw;
+    height: auto;
+    margin-top: 18vh;
+    margin-left: 6vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: pink;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .replybubble5 {
+    width: 19.5vw;
+    height: auto;
+    margin-top: 22.5vh;
+    margin-left: 3vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: pink;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+  .replybubble6 {
+    width: 12vw;
+    height: auto;
+    margin-top: 20.5vh;
+    margin-left: 31.75vw;
+    text-align: center;
+    vertical-align: middle;
+    align-items: center;
+    justify-content: center;
+    font-size: xx-small;
+    background-color: pink;
+    box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
+    border-radius: 2vh;
+    padding: 2vh 1.5vw;
+  }
+}

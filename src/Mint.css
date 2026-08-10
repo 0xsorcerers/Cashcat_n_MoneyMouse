@@ -1,0 +1,598 @@
+.mint-container {
+  position: fixed;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-image: url(./assets/images/smelter.webp);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  isolation: isolate;
+}
+
+.mintTitle {
+  display: flex;
+  flex-direction: column;
+  font-family: 'BabyVintage';
+  font-size: 4.5vh;
+  margin-left: auto;
+  margin-right: auto;
+  align-items: center;
+  color: white;
+  font-weight: bold;
+  text-shadow: 8px 8px 14px rgb(157, 4, 4);
+}
+
+.mintboard {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10vh;
+}
+
+.mintChecker {
+  display: flex;
+  flex-wrap: wrap;
+  height: auto;
+  width: 98vw;
+  margin: 0vh auto 2vh auto;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mintbox {
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  transform-style: preserve-3d;
+  perspective-origin: center center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 17vh;
+  width: 12vw;
+  height: 12vw;
+  padding: 2vh;
+  background-size: contain;
+  background-position: center;
+  background-repeat: no-repeat;
+  cursor: pointer;
+  border-radius: 4vh;
+  background-color: rgba(7, 3, 1, 0.6);
+  box-shadow: 2px 2px 5px 2px rgba(74, 200, 223, 0.9);
+  border: 1px solid lime;
+}
+
+.mintText {
+  font-family: 'Bertram';
+  font-size: large;
+  color: white;
+  text-shadow: 4px 4px 7px rgb(13, 142, 2, 0.9);
+}
+
+
+.mintedText {
+  font-family: 'WhisperingSignature';
+  font-size: medium;
+  color: white;
+  text-shadow: 4px 4px 7px rgb(13, 142, 2, 0.9);
+}
+
+
+
+.air1 {
+  background-image: url(./assets/images/whitebox.webp);
+}
+.air2 {
+  background-image: url(./assets/images/woodbox.webp);
+}
+.air3 {
+  background-image: url(./assets/images/snowbox.webp);
+}
+.air4 {
+  background-image: url(./assets/images/vintagebox.webp);
+}
+.air5 {
+  background-image: url(./assets/images/redbox.webp);
+}
+.air6 {
+  background-image: url(./assets/images/woodcrate.webp);
+}
+
+.icon {
+  width: 50%;
+  height: 50%;
+  object-fit: contain;
+}
+
+.tagline {
+position: fixed;
+bottom: 27vh;
+right: 10vw;
+font-family: "WhisperingSignature";
+color: whitesmoke;
+opacity: 0.8;
+text-align: right;
+line-height: 3vh;
+}
+
+.tagImage {
+position: fixed;
+bottom: 27vh;
+right: 5vw;
+height: 10vh;
+width: 10vh;
+}
+
+.rewardsText {
+  font-family: 'Bertram';
+  font-size: auto;
+  margin-top: 2vh;
+  color: white;
+  text-shadow: 4px 4px 7px rgb(13, 142, 2, 0.9);
+  text-align: center;
+}
+
+.rewardsTextSmall {
+  font-family: 'Bertram';
+  color: white;
+  text-shadow: 4px 4px 7px rgb(13, 142, 2, 0.9);
+  text-align: center;
+  font-size: 2.5vh;
+}
+
+.smaller {
+  /* font-size: 2vh;
+  color: white;
+  font-family: "BabyVintage"; */
+  vertical-align: middle;
+}
+
+.countText {
+  font-family: 'Bertram';
+  font-size: 15vh;
+  color: magenta;
+  text-shadow: 4px 4px 7px rgba(13, 142, 2, 0.9);
+  text-align: center;
+  justify-content: center;
+  background-color: rgba(7, 3, 1, 0.6);
+}
+
+.countTextShrink {
+    font-size: medium;
+    background-color: transparent;
+}
+
+.countTextTiny {
+    background-color: transparent;
+}
+
+.mintOutlay {
+  display: flex;
+  flex-direction: column;
+}
+
+.mintpanel {
+  text-align: right;
+  margin-right: 4vw;
+}
+
+.mint-button {
+  z-index: 100;
+  color: rgb(127, 255, 0);
+  background: linear-gradient(160deg, rgba(127, 255, 0, 0.9), rgba(1, 10, 0, 0.9));
+  border: none;
+  padding: 1vh 2vw 1vh 2vw;
+  border-radius: 2vh;
+  box-shadow: 4px 4px 8px 4px rgba(244, 238, 183, 0.9);
+  width: auto;
+  font-family: 'WhisperingSignature';
+  border: 2px solid white;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+.mint-button:hover {
+  box-shadow: 2px 2px 4px 2px rgba(177, 249, 171, 0.9);
+  color: white;
+  transform: scale(1.1);
+  transition: all 0.3s ease;
+}
+.wheat {
+  color: wheat;
+}
+.sunfire {
+  color: linear-gradient(180deg, rgba(225, 204, 13, 0.9), rgba(243, 31, 19, 0.9));
+}
+.pink {
+  color: pink;
+}
+
+.notifications {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  top: 20vh;
+  right: 5vw;
+  z-index: 500;
+  width: auto;
+}
+.notifications:hover {
+  border-radius: 2vh;
+  background-color: rgba(255, 255, 255, 0.8);
+  box-shadow: 4px 4px 8px 4px rgba(244, 238, 183, 0.9);
+  transition: all 0.3s ease;
+}
+
+.notifyText {
+  font-size: small;
+  vertical-align: middle;
+  text-align: right;
+  padding: 2vh;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(5, 48, 3, 0.9));
+  box-shadow: 4px 4px 8px 4px rgba(244, 238, 183, 0.9);
+  border: 2px solid green;
+  border-radius: 2vh;
+  transition: all 0.3s ease;
+  font-family: 'BabyVintage';
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.5vh 0vw 0.5vh 0vw;
+}
+.myNotifyText {
+  font-size: small;
+  vertical-align: middle;
+  text-align: right;
+  padding: 2vh;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(5, 48, 3, 0.9));
+  box-shadow: 4px 4px 8px 4px rgba(244, 238, 183, 0.9);
+  border-radius: 2vh;
+  transition: all 0.3s ease;
+  font-family: 'BabyVintage';
+  align-items: center;
+  justify-content: space-between;
+  border: 2px solid salmon;
+  margin: 0.5vh 0vw 0.5vh 0vw;
+}
+
+.notifyImg {
+  width: auto;
+  height: 5vh;
+  object-fit: contain;
+  margin: 0 2vh 0 2vh;
+  vertical-align: middle;
+  border-radius: 1vh;
+}
+
+.myNotifyImg {
+  width: auto;
+  height: 5vh;
+  object-fit: contain;
+  margin: 0 2vh 0 2vh;
+  vertical-align: middle;
+  border-radius: 1vh;
+
+}
+
+/* 3D Transformations */
+.mintbox {
+  transform-style: preserve-3d;
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  will-change: transform, box-shadow;
+}
+
+.mintbox:hover {
+  transform: perspective(500px) rotateX(5deg) rotateY(5deg) scale(1.05);
+  box-shadow: 0 10px 20px rgba(74, 200, 223, 0.5);
+}
+
+/* Icon Animations */
+.icon {
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+  position: relative;
+  z-index: 2;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  transform: translateZ(0.1px);
+  will-change: transform; /* Optimize animations */
+}
+
+.mintbox:hover .icon {
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { 
+    transform: 
+      translateY(0) 
+      rotateY(0) 
+      translateZ(0.1px);
+  }
+  50% { 
+    transform: 
+      translateY(-10px) 
+      rotateY(10deg) 
+      translateZ(10px);
+  }
+}
+
+/* Text Glow Effects */
+.mintText {
+  transition: text-shadow 0.3s ease;
+}
+
+.mintbox:hover .mintText {
+  text-shadow: 0 0 10px rgba(13, 142, 2, 0.9), 
+               0 0 20px rgba(13, 142, 2, 0.7),
+               0 0 30px rgba(13, 142, 2, 0.5);
+}
+
+/* Minted Text Wave Animation */
+.mintedText {
+  display: inline-block;
+}
+
+.mintbox:hover .mintedText {
+  animation: wave 2s infinite;
+}
+
+@keyframes wave {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  25% { transform: translateY(-5px) rotate(2deg); }
+  50% { transform: translateY(0) rotate(0); }
+  75% { transform: translateY(5px) rotate(-2deg); }
+}
+
+/* Continuous Count Text Animation */
+.countText {
+  animation: rainbow 5s linear infinite;
+}
+
+@keyframes rainbow {
+  0% { color: magenta; }
+  14% { color: violet; }
+  28% { color: blue; }
+  42% { color: lime; }
+  57% { color: yellow; }
+  71% { color: orange; }
+  85% { color: red; }
+  100% { color: magenta; }
+}
+
+/* Mint Button Continuous Shimmer */
+.mint-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.mint-button::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(30deg);
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -60%; }
+  100% { left: 120%; }
+}
+
+.mint-button:hover::before {
+  animation-duration: 1.5s;
+}
+
+/* Button styles */
+.mint-button {
+  /* existing styles */
+  transform-style: preserve-3d;
+  perspective: 500px;
+  transition: all 0.3s ease, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.mint-button:hover {
+  /* existing hover styles */
+  transform: perspective(500px) rotateX(5deg) scale(1.05);
+  box-shadow: 0 10px 25px rgba(244, 238, 183, 0.7);
+}
+
+.mint-button:active {
+  transform: perspective(500px) rotateX(10deg) scale(0.95);
+}
+
+/* Derp specific animation */
+.derp:hover {
+  background-image: url(./assets/images/whitebox.webp), linear-gradient(45deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3));
+}
+
+/* Lazybear specific animation */
+.lazybear:hover {
+  animation: woodPulse 2s infinite;
+}
+
+@keyframes woodPulse {
+  0%, 100% { background-color: rgba(139, 69, 19, 0.6); }
+  50% { background-color: rgba(160, 82, 45, 0.8); }
+}
+
+/* Pyth specific animation */
+.pyth:hover .icon {
+  animation: redPulse 1.5s infinite;
+}
+
+@keyframes redPulse {
+  0%, 100% { filter: drop-shadow(0 0 5px rgba(255,0,0,0.7)); }
+  50% { filter: drop-shadow(0 0 15px rgba(255,0,0,0.9)); }
+}
+
+/* Brain specific animation */
+.brain:hover {
+  background-blend-mode: overlay;
+  animation: snowFall 5s linear infinite;
+}
+
+/* Mobile-specific adjustments */
+@media (max-width: 768px) {
+  .mobileOutlay {
+    margin-top: 10vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .mobileChecker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mobileMintbox{
+    width: 8vh;
+    height: 8vh;
+    margin-left: 1vh;
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    cursor: pointer;
+    border: 1px solid lime;
+    box-shadow: 1.5px 1.5px 3px 1.5px rgba(74, 200, 223, 0.9);
+    margin: 0.5vh 0vw 0.5vh 1vw;
+    border-radius: 2vh;
+  }
+  .mobileMintText {
+    font-family: 'Bertram';
+    font-size: 4vh;
+    color: white;
+    text-shadow: 4px 4px 7px rgb(13, 142, 2, 0.9);
+  }
+  .mobileMintedText {
+    font-family: 'WhisperingSignature';
+    font-size: 2vh;
+    margin-right: 2vh;
+    font-weight: bold;
+    color: wheat;
+  }
+  .icon {
+    margin: 1vh;
+  }
+  .rewardsText {
+    margin: 0;
+    color: gold;
+    text-shadow: 4px 4px 7px rgba(45, 1, 48, 0.9);
+  }
+  .rewardsTextSmall {
+    color: gold;
+    text-shadow: 4px 4px 7px rgba(45, 1, 48, 0.9);
+  }
+  .countText {
+    font-size: 8vh;
+    color: magenta;
+    text-shadow: 4px 4px 7px rgba(45, 1, 48, 0.9);
+    padding: 0vh 1vh 0vh 1vh;
+    border-radius: 2vh;
+  }
+  .minipanel {
+    display: flex;
+    justify-content: space-evenly;
+    align-items: center;
+    margin-top: 2vh;
+  }
+  .mint-button {
+    font-size: small;
+    font-weight: normal;
+    margin: 0vh 1vw 0vh 1vw;
+  }
+  .mintTitle {
+    margin-top: 10vh;
+  }
+  .mintboardMobile {
+    font-size: 11vw;
+    width: 100vw;
+    text-align: center;
+  }
+  .tagline{
+    bottom: 20vh;
+    right: 22vw;
+    font-weight: bold;
+    color: black;
+    text-shadow: 4px 4px 7px rgba(236, 244, 235, 0.9);
+  }
+  .tagImage {
+    bottom: 20vh;
+    right: 3vw;
+  }
+  
+/* Mobile Checker Animation */
+.mobileChecker {
+  transition: all 0.3s ease;
+}
+
+.mobileChecker:hover {
+  transform: translateX(10px);
+}
+
+.mobileMintbox {
+  transition: all 0.3s ease;
+  transform-style: preserve-3d;
+  z-index: 1;
+  overflow: visible;
+}
+
+.mobileMintbox .icon {
+  z-index: 2;
+  backface-visibility: hidden;
+}
+
+.mobileChecker:hover .mobileMintbox {
+  transform: rotateY(20deg) scale(1.1);
+  box-shadow: 0 5px 15px rgba(74, 200, 223, 0.5);
+}
+
+.mobileMintText {
+  transition: all 0.3s ease;
+}
+
+.mobileChecker:hover .mobileMintText {
+  text-shadow: 0 0 8px rgba(13, 142, 2, 0.7);
+}
+
+.mobileMintbox:hover {
+  transform: rotateY(15deg) scale(1.1);
+  box-shadow: 0 5px 15px rgba(74, 200, 223, 0.5);
+}
+
+.mobileMintText {
+  transition: all 0.3s ease;
+}
+
+.mobileChecker:hover .mobileMintText {
+  transform: translateX(5px);
+  text-shadow: 0 0 8px rgba(255,255,255,0.7);
+}
+
+.mobileMintedText {
+  animation: fadeInOut 3s infinite;
+}
+
+@keyframes fadeInOut {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.mint-button {
+  animation: mobilePulse 2s infinite;
+}
+
+@keyframes mobilePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+}

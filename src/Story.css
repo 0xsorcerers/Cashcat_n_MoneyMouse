@@ -1,0 +1,347 @@
+/* Base hero styles remain unchanged */
+.hero {
+    position: fixed;
+    aspect-ratio: 16/9;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: auto;
+    opacity: 0; /* Start invisible */
+    transform-style: preserve-3d;
+  }
+
+.literary-content-hero,
+.literary-content-villain,
+.literary-content-patron,
+.literary-content-artifact {
+  position: fixed;
+  max-width: 300px;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 20px;
+  border-radius: 10px;
+  color: white;
+  z-index: 80;
+  opacity: 0;
+  transform-style: preserve-3d;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+}
+
+/* Animation Classes */
+.literary-content-hero.animate-in {
+  animation: literaryEntranceHero 1s cubic-bezier(0.2, 0.8, 0.3, 1.2) forwards;
+}
+
+.literary-content-villain.animate-in {
+  animation: literaryEntranceVillain 1s cubic-bezier(0.2, 0.8, 0.3, 1.2) forwards;
+}
+
+.literary-content-patron.animate-in {
+  animation: literaryEntrancePatron 1s cubic-bezier(0.2, 0.8, 0.3, 1.2) forwards;
+}
+
+.literary-content-artifact.animate-in {
+  animation: literaryEntranceArtifact 1s cubic-bezier(0.2, 0.8, 0.3, 1.2) forwards;
+}
+
+/* Keyframe Animations */
+@keyframes literaryEntranceHero {
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) rotateY(90deg) translateZ(100px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) rotateY(0) translateZ(0);
+  }
+}
+
+@keyframes literaryEntranceVillain {
+  0% {
+    opacity: 0;
+    transform: translateX(50px) rotateY(-90deg) translateZ(100px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) rotateY(0) translateZ(0);
+  }
+}
+
+@keyframes literaryEntrancePatron {
+  0% {
+    opacity: 0;
+    transform: translateY(50px) rotateX(45deg) translateZ(100px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) rotateX(0) translateZ(0);
+  }
+}
+
+@keyframes literaryEntranceArtifact {
+  0% {
+    opacity: 0;
+    transform: scale(0.5) rotateZ(15deg) translateZ(100px);
+  }
+  70% {
+    transform: scale(1.1) rotateZ(-5deg) translateZ(0);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotateZ(0) translateZ(0);
+  }
+}
+
+/* Candle animations */
+/* .candle {
+  position: absolute;
+  width: 40px;
+  height: auto;
+  animation: candleFlicker 3s infinite alternate;
+}
+
+@keyframes candleFlicker {
+  0%, 100% { opacity: 0.9; transform: scale(1); }
+  25% { opacity: 1; transform: scale(1.05); }
+  50% { opacity: 0.8; transform: scale(0.95); }
+  75% { opacity: 1; transform: scale(1.02); }
+} */
+  
+  /* Storyboard - Gentle fade in */
+  .foreground-storyboard {
+    animation: storyboardEntrance 1.2s ease-out forwards;
+  }
+  
+  @keyframes storyboardEntrance {
+    from { opacity: 0; transform: translateZ(-50px); }
+    to { opacity: 1; transform: translateZ(0); }
+  }
+  
+  /* Hero - Slide from right with 3D tilt */
+  .foreground-hero {
+    animation: heroEntrance 1s cubic-bezier(0.2, 0.8, 0.3, 1) forwards;
+  }
+  
+  @keyframes heroEntrance {
+    from { 
+      opacity: 0;
+      transform: translateX(30vw) rotateY(15deg);
+    }
+    to { 
+      opacity: 1;
+      transform: translateX(0) rotateY(0);
+    }
+  }
+  
+  /* Villain - Bounce in from right */
+  .foreground-villain {
+    animation: villainEntrance 0.8s cubic-bezier(0.5, 1.5, 0.5, 1) forwards;
+  }
+  
+  @keyframes villainEntrance {
+    0% { 
+      opacity: 0;
+      transform: translateX(40vw) scale(0.8);
+    }
+    70% {
+      transform: translateX(-5vw) scale(1.05);
+    }
+    100% { 
+      opacity: 1;
+      transform: translateX(0) scale(1);
+    }
+  }
+  
+  /* Patron - Floating downward entrance */
+  .foreground-patron {
+    animation: patronEntrance 1s ease-out forwards;
+  }
+  
+  @keyframes patronEntrance {
+    from { 
+      opacity: 0;
+      transform: translateY(-20vh) rotateX(10deg);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0) rotateX(0);
+    }
+  }
+  
+  /* Artifact - Dramatic zoom in */
+  .foreground-artifact {
+    animation: artifactEntrance 0.7s cubic-bezier(0.2, 0.9, 0.4, 1.2) forwards;
+  }
+  
+  @keyframes artifactEntrance {
+    from { 
+      opacity: 0;
+      transform: scale(1.5) translateZ(100px);
+      filter: blur(5px);
+    }
+    to { 
+      opacity: 1;
+      transform: scale(1) translateZ(0);
+      filter: blur(0);
+    }
+  }
+  
+.desktop-img {
+  aspect-ratio: 16/9; /* Landscape */
+}
+  
+.mobile-img {
+  aspect-ratio: 9/16; /* Portrait */
+}
+
+.candle {
+  height: 5vh;
+  width: 5vh;
+}
+
+.literary-content-hero {
+  position: fixed;
+  top: 20vh;
+  right: 72vw;
+  font-family: 'Kugile';
+  background-color: rgba(2, 0, 2, 0.5);
+  width: 50vw;
+  text-shadow: 0 0 15px 5px rgba(14, 3, 12, 0.7);
+  height: auto; 
+  text-align: right;
+  padding: 1vh;
+}
+
+.literary-content-villain {
+  position: fixed;
+  top: 2.5vw;
+  left: 38vw;
+  font-family: 'Kugile';
+  background-color: rgba(2, 0, 2, 0.7);
+  width: 30vw;
+  text-shadow: 0 0 15px 5px rgba(14, 3, 12, 0.7);
+  height: auto; 
+  padding: 1vh;
+  align-items: left;
+  text-align: left;
+}
+
+.literary-content-patron {
+  position: fixed;
+  top: 50vh;
+  right: 28vw;
+  font-family: 'Kugile';
+  background-color: rgba(2, 0, 2, 0.7);
+  width: 20vw;
+  text-shadow: 0 0 15px 5px rgba(14, 3, 12, 0.7);
+  height: auto; 
+  padding: 1vh;
+  align-items: right;
+  text-align: right;
+}
+
+.literary-content-artifact {
+  position: fixed;
+  top: 20vh;
+  right: 1vw;
+  font-family: 'Kugile';
+  background-color: rgba(2, 0, 2, 0.4);
+  width: 20vw;
+  text-shadow: 0 0 15px 5px rgba(14, 3, 12, 0.7);
+  padding: 1vh;
+  align-items: right;
+  text-align: right;
+}
+
+.literary-content-title {
+  font-weight: bold;
+  font-family: 'WhisperingSignature';
+  font-size: auto;
+}
+
+.literary-content-phonetic {
+  font-family: 'Verdana';
+  font-style: italic;
+  color: whitesmoke;
+  font-size: 1.5vh;
+}
+
+.literary-content-text{
+  display: flex;
+  flex: wrap;
+  font-family: 'NexaHeavy';
+  font-size: 1.5vh;
+  color: magenta;
+  width: auto;
+  text-shadow: 0 5px 15px 5px rgba(249, 244, 249, 0.7);
+  text-align: left;
+}
+
+.storyTitle {
+  position: fixed;
+  bottom: 30vh;
+  left: 1vw;
+  font-family: 'WhisperingSignature';
+  font-size: 7vh;
+  text-align: center;
+  text-shadow: 5px 5px 5px 5px rgba(249, 246, 249, 0.9);
+  z-index: 35;
+}
+
+
+@media only screen and (max-width: 768px) {
+  .literary-content-title {
+    font-size: 1.8vh;
+    padding: 0;
+    margin: 0;
+  }
+  .literary-content-phonetic {
+    font-size: 0.75vh;
+  }
+  .literary-content-text {
+    font-size: 1.5vh;
+  }
+  .literary-content-hero {
+    top: 10vh;
+    left: 1vw;
+    width: 48vw;
+    line-height: 1.2;
+    font-weight: normal;
+  }
+  .literary-content-villain {
+    position: fixed;
+    top: 25vh;
+    left: 56vw;
+    width: 40vw;
+    text-align: right;
+    background-color: rgba(2, 0, 2, 0.6);
+  }
+  .literary-content-patron {
+    top: 46vh;
+    left: 1vw;
+    width: 48vw;
+  }
+  .literary-content-artifact {
+    top: 70vh;
+    right: 1vw;
+    width: 60vw;
+  }
+  .candle {
+    height: 3vh;
+    width: 3vh;
+  }
+  .storyTitle {
+    bottom: 27vh;
+    left: 2vw;
+    font-size: 2.5vh;
+    height: 8vh;
+    z-index: 35;
+  }
+}
+  
+  /* Ensure z-indexes stay on top of animations */
+  .z10 { z-index: 10; }
+  .z20 { z-index: 20; }
+  .z30 { z-index: 30; }
+  .z40 { z-index: 40; }
+  .z50 { z-index: 50; }
