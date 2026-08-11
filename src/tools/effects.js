@@ -26,6 +26,7 @@ import wrong from "../assets/sounds/effects/wrong.mp3";
 import metadata from "../assets/docs/metadata_search_query.json";
 
 import logo from "../assets/images/logo.webp";
+import baselogo from "../assets/images/baselogo.webp";
 import air1 from "../assets/images/air1-image.webp";
 import air2 from "../assets/images/air2-image.webp";
 import air3 from "../assets/images/air3-image.webp";
@@ -233,6 +234,7 @@ const documents = {
 
 const visualEffects = {
   logo,
+  logobase: baselogo,
   air1,
   air2,
   air3,
