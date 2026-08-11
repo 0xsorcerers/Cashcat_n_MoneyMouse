@@ -2265,7 +2265,7 @@ const Legends = ({setComponent}) => {
                })()}
                <div style={{ marginTop: '0.45rem' }}>
                  Your bounty needs to match your hunt to win the match, so your{' '}
-                 <span className="outcome-hl">${blockchain.symbol}</span>
+                 <span className="outcome-hl">${blockchain.nativeSymbol}</span>
                  {' '}fee has joined the season pot. Hunt again!
                </div>
              </div>
