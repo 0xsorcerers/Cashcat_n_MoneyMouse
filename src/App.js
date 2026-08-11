@@ -170,62 +170,110 @@ function App () {
       controls={false}
     />
 
-    <div className="header">
-      <img src={visualEffects.logo} alt="Logo" className={`logo Introduce`}/>  
-      {/* Mobile dropdown */}
-      <div className="mobile-nav pulsar">
-        <button 
-          className="mobile-nav-button" 
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-        >
-          Menu {isDropdownOpen ? <BiChevronUp /> : <BiChevronDown />}
-        </button>
-        {isDropdownOpen && (
-          <div className="mobile-dropdown">
-            {/* <a 
-              className="nav-link" 
-              href="https://" 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              Buy $CASHCATS
-            </a> */}
-            {component !== 'legends' ? 
-            <div className={`nav-link ${account ? '' : 'opacity2'}`}  onClick={handleStart}>
-              PLAY
-            </div> : <div className="nav-link" onClick={() => setComponent('mint')}>
-              Spawn
-            </div>
-            }
-            
-            <div style={{fontFamily: "BabyVintage"}}>
-              <Connector style={{width: "50%"}}/>
-            </div>
-          </div>
-        )}
+    <header className={`app-header ${component === 'legends' ? 'app-header--arena' : ''}`}>
+      <div className="app-header__brand">
+        <img src={visualEffects.logo} alt="Cashcats" className="logo" />
+        <nav className="app-header__socials" aria-label="Social links">
+          <a
+            className="social-btn"
+            href="https://cashcats.my"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Whitepaper / Docs"
+          >
+            <GrDocumentText aria-hidden />
+            <span className="social-btn__label">How To</span>
+          </a>
+          <a
+            className="social-btn"
+            href="https://t.me/cashcats"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Telegram"
+          >
+            <FaTelegram aria-hidden />
+            <span className="social-btn__label">Telegram</span>
+          </a>
+          <a
+            className="social-btn"
+            href="https://x.com/cashcats_base"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="X"
+          >
+            <FaSquareXTwitter aria-hidden />
+            <span className="social-btn__label">X</span>
+          </a>
+        </nav>
       </div>
 
-      {/* Desktop navigation */}
-      <div className="desktop-nav">
-        {/* <a className="nav-link" href="https://" target="_blank" rel="noopener noreferrer">Buy $CASHCATS</a> */}
-        {component !== 'legends' ? 
+      <div className="app-header__actions">
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={handlePlay}
+          title={audioPlaying ? 'Mute music' : 'Play music'}
+          aria-label={audioPlaying ? 'Mute music' : 'Play music'}
+        >
+          {audioPlaying
+            ? <BiSolidVolumeMute />
+            : <BiSolidVolumeFull />}
+        </button>
+
+        <div className="desktop-nav">
+          {component !== 'legends' ? (
             <div className={`nav-link ${account ? '' : 'opacity2'}`} onClick={handleStart}>
               PLAY
-            </div> : <div className="nav-link" onClick={() => setComponent('mint')}>
+            </div>
+          ) : (
+            <div className="nav-link" onClick={() => setComponent('mint')}>
               SPAWN
             </div>
-        }
-        {/* {component === 'home' && (
-          <>
-            <div className="nav-link" onClick={getPartners}>Partners</div>
-            <div className="nav-link" onClick={getAudits}>Audits</div>
-          </>
-        )} */}
-        <div style={{fontFamily: "BabyVintage"}}>
-          <Connector style={{width: "50%"}}/>
+          )}
+          <div className="app-header__wallet">
+            <Connector />
+          </div>
+        </div>
+
+        <div className="mobile-nav">
+          <button
+            type="button"
+            className="mobile-nav-button"
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            aria-expanded={isDropdownOpen}
+          >
+            Menu {isDropdownOpen ? <BiChevronUp /> : <BiChevronDown />}
+          </button>
+          {isDropdownOpen && (
+            <div className="mobile-dropdown">
+              {component !== 'legends' ? (
+                <div className={`nav-link ${account ? '' : 'opacity2'}`} onClick={() => { handleStart(); setIsDropdownOpen(false); }}>
+                  PLAY
+                </div>
+              ) : (
+                <div className="nav-link" onClick={() => { setComponent('mint'); setIsDropdownOpen(false); }}>
+                  Spawn
+                </div>
+              )}
+              <div className="app-header__wallet">
+                <Connector />
+              </div>
+              <div className="mobile-socials">
+                <a className="social-btn" href="https://cashcats.my" target="_blank" rel="noopener noreferrer" title="How To Play">
+                  <GrDocumentText /><span>Docs</span>
+                </a>
+                <a className="social-btn" href="https://t.me/cashcatsnetwork" target="_blank" rel="noopener noreferrer" title="Telegram">
+                  <FaTelegram /><span>Telegram</span>
+                </a>
+                <a className="social-btn" href="https://x.com/cashcatsnetwork" target="_blank" rel="noopener noreferrer" title="X">
+                  <FaSquareXTwitter /><span>X</span>
+                </a>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-    </div> 
+    </header>
     {activeData.type === "audits" && (
       <Audits className="audits" images={activeData.images} visible={activeData.visible} />
     )}
@@ -234,24 +282,6 @@ function App () {
     )}
     
     {component === 'home' && <FlipBoxGallery setComponent={setComponent}/>}
-    
-    
-      <nav className="footer">
-        <div className="footer-link">  
-          {audioPlaying ? <BiSolidVolumeMute style={{ width: "4vh", height: "4vh" }} onClick={handlePlay}/> 
-          : <BiSolidVolumeFull style={{ width: "4vh", height: "4vh" }} onClick={handlePlay}/>}
-              
-          <a className="hyper-link nav-gold" href="" target="_blank" rel="noopener noreferrer" title="Docs">
-          <GrDocumentText style={{ width: "4vh", height: "4vh" }}/>
-          </a>            
-          <a className="hyper-link nav-gold" href="" target="_blank" rel="noopener noreferrer" title="Telegram">
-            <FaTelegram style={{ width: "4vh", height: "4vh" }}/>
-          </a>       
-          <a className="hyper-link nav-gold" href="https://x.com/cashcats_base" target="_blank" rel="noopener noreferrer" title="Twitter">
-            <FaSquareXTwitter style={{ width: "4vh", height: "4vh" }}/>
-          </a>
-        </div>
-      </nav>
     </div>
     {component === 'mint' && <Mint setComponent={setComponent} />}
     {component === 'legends' && <Legends setComponent={setComponent} />}

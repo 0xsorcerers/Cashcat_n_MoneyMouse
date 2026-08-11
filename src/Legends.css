@@ -1,4 +1,4 @@
-.legends-container {
+﻿.legends-container {
   position: fixed;
   left: 0;
   width: 100vw;
@@ -58,19 +58,27 @@
 }
 
 .index11 {
-  z-index: 1;
+  z-index: 2;
   left: 29vw;
   /* background-color: aquamarine; */
 }
 
 .index12 {
-  z-index: 0;
+  z-index: 3;
   left: 62vw;
 }
 
 .index13 {
   z-index: 20;
   opacity: 0.85;
+}
+
+/* Interaction privilege — choice or match jumps to front when active */
+.characterImage.stage-focus {
+  z-index: 12 !important;
+}
+.stage-focus-label {
+  z-index: 13 !important;
 }
 
 .centered {
@@ -103,22 +111,219 @@
 }
 
 .nftDisplay {
-  background-color: black;
-  opacity: 0.9;
-  z-index: 40;
+  background-color: rgba(0, 0, 0, 0.92);
+  opacity: 1;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 1rem 1rem max(1rem, env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  overflow: auto;
+  cursor: pointer;
+}
+
+.nftDisplay-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: min(92vw, 560px);
+  width: 100%;
+  cursor: default;
+}
+
+.nftDisplay-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  position: relative;
+  flex-shrink: 0;
 }
 
 .nftTitle {
-  margin-top: 2vh;
-  height: 6vh;
-  font-size: auto;
-  font-family: 'BabyVintage';
+  margin: 0;
+  height: auto;
+  flex: 1 1 auto;
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  font-family: 'BabyVintage', "NexaHeavy", system-ui, sans-serif;
   color: hotpink;
+  text-align: center;
+  line-height: 1.3;
+  padding: 0 2.5rem; /* room for X */
+}
+
+.nft-close-btn {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: rgba(20, 16, 24, 0.9);
+  color: #ffe6f0;
+  font-size: 1.45rem;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.nft-close-btn:hover {
+  background: rgba(180, 40, 90, 0.85);
+  border-color: rgba(255, 150, 190, 0.55);
+  color: #fff;
+}
+
+/* 3D flip: image ↔ metadata */
+.nft-flip {
+  width: min(86vw, 420px);
+  max-width: 100%;
+  aspect-ratio: 1;
+  max-height: min(70vh, calc(100dvh - 12rem));
+  perspective: 1200px;
+  cursor: pointer;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.nft-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.4, 0.1, 0.2, 1);
+}
+
+.nft-flip.is-flipped .nft-flip-inner {
+  transform: rotateY(180deg);
+}
+
+.nft-flip-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.nft-flip-front {
+  background: rgba(12, 10, 16, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+}
+
+.nft-flip-back {
+  transform: rotateY(180deg);
+  background: linear-gradient(160deg, rgba(22, 16, 28, 0.98), rgba(10, 12, 18, 0.98));
+  border: 1px solid rgba(255, 214, 120, 0.28);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  padding: 1rem 1.1rem;
+  overflow: auto;
 }
 
 .nftDisplayImage {
-  height: 82vh;
-  width: auto;
+  height: 100%;
+  width: 100%;
+  max-width: none;
+  max-height: none;
+  object-fit: contain;
+  border-radius: 12px;
+  pointer-events: none;
+  user-select: none;
+}
+
+.nft-flip-hint {
+  position: absolute;
+  bottom: 0.55rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 240, 250, 0.85);
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.nft-flip-back .nft-flip-hint {
+  position: static;
+  transform: none;
+  margin-top: 0.75rem;
+  align-self: center;
+}
+
+.nft-info {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  text-align: left;
+  overflow: auto;
+}
+
+.nft-info-block {
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.nft-info-block:last-of-type {
+  border-bottom: none;
+}
+.nft-info-block--compact {
+  padding-bottom: 0.25rem;
+}
+
+.nft-info-header {
+  margin: 0 0 0.25rem;
+  font-family: "NexaHeavy", system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 214, 120, 0.9);
+}
+
+.nft-info-value {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: clamp(1rem, 2.4vw, 1.25rem);
+  font-weight: 700;
+  color: #f7f1e6;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.nft-info-value--accent {
+  color: #ffe27a;
+  font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+}
+
+.nft-info-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: rgba(247, 241, 230, 0.62);
+  font-weight: 500;
 }
 
 .nftImage {
@@ -297,15 +502,24 @@
   z-index: 15;
 }
 
+/* Fate labels — high-contrast gold (black was unreadable on busy art) */
 .villainText {
   position: fixed;
   top: 59vh;
   right: 7vw;
-  color: black;
-  text-shadow: 4px 4px 8px rgb(255, 255, 255);
-  font-family: "Cakecafe";
+  color: #ffe27a;
+  text-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.95),
+    0 2px 8px rgba(0, 0, 0, 0.85),
+    0 0 12px rgba(0, 0, 0, 0.55);
+  font-family: "Cakecafe", "NexaHeavy", system-ui, sans-serif;
   font-size: x-large;
   z-index: 15;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(8, 10, 16, 0.62);
+  border: 1px solid rgba(255, 214, 120, 0.35);
+  letter-spacing: 0.03em;
 }
 
 .heroName {
@@ -401,9 +615,68 @@
   font-family: 'Cakecafe';
 }
 
-.speechText {
-  font-family: 'Cakecafe';
-  opacity: 0.9;
+/*
+ * Comic speech chips — fixed position set inline (random top/left/tint per line).
+ * Independent of characterImage anchors so banter can drift above portraits.
+ */
+.speechText,
+.speech-chip {
+  position: fixed !important;
+  top: 10vh;
+  left: 4vw;
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box !important;
+  width: auto !important;
+  min-width: 9vw;
+  max-width: 18vw;
+  height: auto !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0.65rem 0.9rem !important;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif !important;
+  font-size: clamp(0.75rem, 1.1vw, 0.95rem) !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0.01em;
+  color: #1a1408 !important;
+  text-align: center !important;
+  text-shadow: none !important;
+  /* default tint; inline style overrides background/border/boxShadow per speech */
+  background: linear-gradient(
+    165deg,
+    rgba(255, 252, 245, 0.98) 0%,
+    rgba(255, 240, 210, 0.96) 100%
+  );
+  border: 1.5px solid rgba(80, 50, 0, 0.2);
+  border-radius: 16px !important;
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+  opacity: 1 !important;
+  z-index: 14 !important;
+  pointer-events: auto;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.25s ease;
+  animation: speechPopIn 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.15) both;
+}
+
+@keyframes speechPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.85) translateY(8px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.speech-chip.stage-focus,
+.speechText.stage-focus {
+  z-index: 16 !important;
+  filter: brightness(1.03);
 }
 
 .imageBubble1 {
@@ -676,105 +949,142 @@
     height: auto;
     width: 100vw;
   }
+  /*
+   * Mobile stage — proportional portraits; match is slightly larger (result primacy).
+   * Default stack: Match > Choice > Hero. Interaction uses .stage-focus (z-index 12).
+   */
   .characterImage {
-    top: 9vh;
+    top: 8vh;
     height: auto;
-    width: 62vw;
-  }
-  .index11{
-    top:  30vh;
-    left: 44vw;
     width: 56vw;
+    max-width: 58vw;
+  }
+  .index10 {
+    top: 8vh;
+    left: 2vw;
+    width: 56vw;
+    max-width: 58vw;
+    z-index: 1;
+  }
+  .index11 {
+    top: 24vh;
+    left: 42vw;
+    width: 56vw;
+    max-width: 58vw;
+    z-index: 2;
   }
   .index12 {
-    top:  45vh;
-    left: 2vw;
-    width: 68vw;
+    top: 42vh; /* lowered a little from 38vh */
+    left: 1vw;
+    width: 62vw; /* slightly bigger — result is the key reveal */
+    max-width: 66vw;
+    z-index: 3;
   }
   .vs {
-    top: 15vh;
-    left: 37vw; 
+    top: 14vh;
+    left: 36vw;
   }
   .heroText {
-    top: 11vh;
-    left: 27vw;
+    top: 9vh;
+    left: 24vw;
     font-size: medium;
   }
   .heroName {
-    top: 39vh;
+    top: 34vh;
     left: 6vw;
     font-size: medium;
   }
   .villainText {
-    top: 62vh;
-    left: 10vw;
-    font-size: medium;
+    top: 60vh;
+    left: 8vw;
+    right: auto;
+    font-size: 0.95rem;
+    z-index: 4;
+    color: #ffe27a;
+    max-width: 48vw;
+    white-space: nowrap;
   }
   .villainName {
-    top: 52vh;
-    left: 63vw;
+    top: 46vh;
+    left: 60vw;
     font-size: large;
-    z-index: 15;
+    z-index: 4;
   }
-  .nftImage {
-    bottom: 11.5vh;
+
+  /* When choice/match is interacted with, leap above everything else on stage */
+  .characterImage.index10.stage-focus,
+  .characterImage.index11.stage-focus,
+  .characterImage.index12.stage-focus {
+    z-index: 12 !important;
+  }
+  .villainName.stage-focus-label,
+  .villainText.stage-focus-label,
+  .heroName.stage-focus-label,
+  .heroText.stage-focus-label {
+    z-index: 13 !important;
+  }
+
+  /* Mobile speech chips — wider for phone; position still from inline random style */
+  .speechText,
+  .speech-chip {
+    min-width: 32vw !important;
+    max-width: 48vw !important;
+    padding: 0.55rem 0.75rem !important;
+    font-size: 0.74rem !important;
+    border-radius: 14px !important;
+  }
+
+  /* NFT lightbox: fit whole art above Trade button */
+  .nftDisplay {
+    justify-content: flex-start;
+    padding-top: max(3.25rem, calc(env(safe-area-inset-top) + 2.5rem));
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+    gap: 0.65rem;
+  }
+  .nftDisplay-panel {
+    max-width: min(94vw, 100%);
+    gap: 0.55rem;
+  }
+  .nftTitle {
+    font-size: 0.95rem;
+    padding: 0 2.4rem 0 0.25rem;
+    line-height: 1.3;
+  }
+  .nft-close-btn {
+    width: 2.1rem;
+    height: 2.1rem;
+    font-size: 1.3rem;
+  }
+  .nft-flip {
+    width: min(88vw, 100%);
+    max-height: calc(100dvh - 11.5rem);
+    aspect-ratio: 1;
+  }
+  .nft-flip-back {
+    padding: 0.85rem 0.9rem;
+  }
+  .nft-info-header {
+    font-size: 0.62rem;
+  }
+  .nft-info-value {
+    font-size: 1.05rem;
+  }
+  .nft-info-note {
+    font-size: 0.68rem;
+  }
+  .nftDisplay .trade-button {
+    flex-shrink: 0;
     height: auto;
-    width: 15vw;
-    border-radius: 2vh;
-    left: 1vw;
+    min-height: 2.75rem;
+    width: min(88vw, 320px);
+    padding: 0.65rem 1.1rem;
+    font-size: 1rem;
+    margin: 0.25rem 0 0.5rem;
   }
-  .nftText {
-    bottom: 10vh;
-    height: 10vh;
-    width: 15vw;
-    border-radius: 2vh;
-    left: 1vw;
-  }
-  .panel {
-    bottom: 10vh;
-    left: 20vw;
-    width: 73vw;
-    height: 10vh;
-    display: grid;
-    grid-template-columns: repeat(9, 1fr);
-    opacity: 0.8;
-    justify-content: center;
-    background-color: #000;
-  }
-  .selectedImage {
-    height: 7vw;
-    width: 7vw;
-    cursor: pointer;
-    border: 1px solid black;
-  }
-  .tray {
-    border: 0;
-    border-top: 1vh solid black;
-    border-bottom: 1vh solid black;
-    height: 8vh;
-  }
-  .scoreboard {
-    font-size: large;
-    width: 50vw;
-    margin-top: 1vh;
-  }
-  .goldtext {
-    font-size: large;
-  }
+  /* NFT / panel / tray mobile chrome is handled exclusively by .bottom-chrome rules below —
+     do not re-apply legacy fixed positioning here. */
   .fontSmall {
     font-size: small;
-  }
-  .button-board {
-    width: 30vw;
-  }
-  .legend-button {
-    font-size: auto;
-    height: auto;
-    width: 100%;
-    text-align: center;
-    border: 0.25vh solid;
-    padding: 1vh;
-    margin: 0;
   }
   .balloons {
     top: 91vh;
@@ -1077,5 +1387,744 @@
     box-shadow: 0 0 10px rgba(79, 79, 79, 0.5);
     border-radius: 2vh;
     padding: 2vh 1.5vw;
+  }
+}
+
+/* =========================================================
+   MODERN CHROME KEEP-LIST (header/trays/nft/toasts/outcomes)
+   Does not override hero/choice/match placement above.
+   ========================================================= */
+:root {
+  --lg-ink: #0b0c10;
+  --lg-panel-strong: rgba(8, 10, 16, 0.92);
+  --lg-gold: #f5c542;
+  --lg-gold-soft: #ffe6a0;
+  --lg-cream: #f7f1e6;
+  --lg-muted: rgba(247, 241, 230, 0.72);
+  --lg-accent: #ff6b9d;
+  --lg-ok: #6dffb0;
+  --lg-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+  --lg-radius: 16px;
+  --lg-font: "NexaHeavy", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lg-ui: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --lg-hud-h: clamp(64px, 9vh, 92px);
+  --lg-panel-h: clamp(72px, 11vh, 110px);
+  --lg-nft-w: clamp(72px, 8.5vw, 108px);
+  --lg-chrome-h: calc(var(--lg-hud-h) + var(--lg-panel-h));
+  --z-bg: 0;
+  --z-stage: 10;
+  --z-chrome: 40;
+  --z-tips: 80;
+  --z-modal: 9000;
+  --z-toast: 10000;
+}
+
+.legends-container {
+  isolation: isolate;
+  height: 100dvh;
+  overflow: hidden;
+  background-color: #0b0c10;
+}
+
+.legends-container::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-bg);
+  background:
+    radial-gradient(ellipse 80% 70% at 50% 38%, transparent 30%, rgba(0, 0, 0, 0.28) 100%),
+    linear-gradient(to top, rgba(0, 0, 0, 0.55) 0%, transparent 28%);
+}
+
+/* Tip cards above characters */
+.legends-container .literary-content-hero,
+.legends-container .literary-content-villain,
+.legends-container .literary-content-patron,
+.legends-container .literary-content-artifact {
+  z-index: var(--z-tips) !important;
+}
+
+/* Toasts always on top of portraits */
+.notificationscancel,
+.notifications {
+  position: fixed !important;
+  top: max(4.75rem, calc(env(safe-area-inset-top, 0px) + 4.25rem));
+  right: 0.75rem;
+  z-index: var(--z-toast) !important;
+  width: min(92vw, 340px);
+}
+
+.legends-container .notifyText {
+  font-family: var(--lg-ui) !important;
+  font-size: 0.9rem !important;
+  line-height: 1.35;
+  border-radius: 14px !important;
+  padding: 0.75rem 0.9rem !important;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: linear-gradient(180deg, rgba(18, 28, 18, 0.95), rgba(8, 40, 16, 0.92)) !important;
+  border: 1px solid rgba(120, 220, 140, 0.4) !important;
+  color: #e8ffe9 !important;
+  box-shadow: var(--lg-shadow) !important;
+}
+
+.cancelled {
+  background: linear-gradient(180deg, rgba(40, 12, 16, 0.95), rgba(80, 16, 24, 0.92)) !important;
+  border: 1px solid rgba(255, 120, 130, 0.45) !important;
+  color: #ffe8ea !important;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4) !important;
+}
+
+/* Bottom chrome: NFT + selection + tray */
+.bottom-chrome {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--z-chrome);
+  display: grid;
+  grid-template-columns: var(--lg-nft-w) minmax(0, 1fr);
+  gap: 0.55rem;
+  /* Stretch so NFT column reaches the page bottom with the tray */
+  align-items: stretch;
+  padding: 0.45rem 0.55rem max(0.45rem, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent 0%, rgba(4, 5, 10, 0.45) 18%, rgba(4, 5, 10, 0.85) 100%);
+  pointer-events: none;
+}
+.bottom-chrome > * { pointer-events: auto; }
+
+.nft-dock {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 0;
+  min-width: 0;
+  min-height: 100%;
+  height: 100%;
+  align-self: stretch;
+}
+
+/* NFT fills dock to bottom of page; image fills & centers within the frame */
+.bottom-chrome .nftImage,
+.nft-dock .nftImage {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100%;
+  max-height: none;
+  flex: 1 1 auto;
+  object-fit: cover;
+  object-position: center center;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(245, 197, 66, 0.25);
+  z-index: auto;
+  cursor: pointer;
+  background: rgba(8, 9, 14, 0.65);
+}
+
+.bottom-chrome .nftText,
+.nft-dock .nftText {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 100%;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 214, 120, 0.4);
+  z-index: auto;
+  color: var(--lg-gold);
+  background: var(--lg-panel-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-family: var(--lg-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.35rem;
+}
+
+.chrome-main {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+/* Override original panel/tray when inside chrome */
+.bottom-chrome .panel {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  display: inline-flex !important;
+  flex-wrap: nowrap !important;
+  grid-template-columns: none !important;
+  width: max-content !important;
+  max-width: 100% !important;
+  height: var(--lg-panel-h) !important;
+  padding: 0.4rem 0.55rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.12) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, rgba(18, 20, 28, 0.96), rgba(8, 9, 14, 0.98)) !important;
+  opacity: 1 !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  align-self: flex-start;
+  gap: 0.4rem;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 197, 66, 0.75) rgba(255, 255, 255, 0.06);
+}
+
+/* Golden horizontal scroll affordance on the mouse selection tray */
+.bottom-chrome .panel::-webkit-scrollbar {
+  height: 7px;
+}
+.bottom-chrome .panel::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  margin: 0 0.4rem;
+}
+.bottom-chrome .panel::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #c9a227, #f5c542, #ffe27a, #f5c542, #c9a227);
+  border-radius: 999px;
+  border: 1px solid rgba(80, 50, 0, 0.35);
+  box-shadow: 0 0 6px rgba(245, 197, 66, 0.45);
+}
+.bottom-chrome .panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #f5c542, #ffe27a, #fff3b0, #ffe27a, #f5c542);
+}
+
+.bottom-chrome .selectedImage {
+  flex: 0 0 auto;
+  height: calc(var(--lg-panel-h) - 1.3rem) !important;
+  width: auto !important;
+  min-width: 0;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 10px !important;
+  border: 2px solid transparent !important;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.bottom-chrome .selectedImage:hover {
+  transform: translateY(-3px) scale(1.06);
+  border-color: rgba(245, 197, 66, 0.7) !important;
+}
+.bottom-chrome .selectedImage.notallowed {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.4);
+}
+
+.bottom-chrome .tray {
+  position: relative !important;
+  bottom: auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  display: grid !important;
+  grid-template-columns: minmax(90px, 1.1fr) minmax(0, 2.4fr) minmax(140px, 1.25fr);
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  width: 100% !important;
+  height: var(--lg-hud-h) !important;
+  padding: 0.45rem 0.65rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 14px !important;
+  background: linear-gradient(180deg, rgba(10, 12, 18, 0.28), rgba(6, 7, 12, 0.38)) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  color: var(--lg-cream);
+  font-family: var(--lg-ui);
+  font-size: inherit;
+}
+
+.bottom-chrome .dashboard {
+  display: flex;
+  align-items: center;
+  width: auto;
+  height: auto;
+  min-width: 0;
+}
+
+.bottom-chrome .scoreboard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.75rem;
+  width: auto;
+  height: auto;
+  margin: 0;
+  font-size: clamp(0.78rem, 1.35vw, 1rem);
+  color: var(--lg-muted);
+}
+
+.bottom-chrome .scoreboard .stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.bottom-chrome .scoreboard .stat-label {
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--lg-muted);
+  font-weight: 600;
+}
+
+.bottom-chrome .button-board {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: auto;
+  height: auto;
+  min-width: 0;
+}
+
+.pot-chip {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 214, 120, 0.35);
+  background: linear-gradient(145deg, rgba(40, 28, 8, 0.88), rgba(12, 10, 6, 0.92));
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  font-family: var(--lg-ui);
+  color: var(--lg-cream);
+  pointer-events: none;
+}
+.pot-chip .smaller {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--lg-muted);
+}
+.pot-chip .pot-value {
+  font-family: var(--lg-font);
+  font-size: clamp(0.95rem, 1.6vw, 1.2rem);
+  font-weight: 800;
+  color: var(--lg-gold);
+}
+
+.goldtext {
+  font-family: var(--lg-font) !important;
+  font-size: 1.05em !important;
+  font-weight: 800;
+  color: var(--lg-gold) !important;
+  background: none !important;
+  -webkit-text-fill-color: var(--lg-gold) !important;
+  animation: none !important;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.55);
+}
+
+.bottom-chrome .legend-button,
+.legend-button {
+  position: relative;
+  font-family: var(--lg-font) !important;
+  font-size: clamp(1.05rem, 1.8vw, 1.35rem) !important;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #1a1200;
+  background: linear-gradient(180deg, #ffe27a 0%, #f5c542 45%, #e0a820 100%) !important;
+  height: auto !important;
+  min-height: 3.15rem;
+  width: 100%;
+  max-width: 260px;
+  margin: 0 !important;
+  border-radius: 999px !important;
+  padding: 0.55rem 1.25rem !important;
+  border: 2px solid rgba(80, 50, 0, 0.45) !important;
+  box-shadow: 0 6px 0 rgba(120, 80, 0, 0.35), 0 10px 22px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  overflow: hidden;
+}
+.legend-button:hover:not(:disabled) { filter: brightness(1.05); transform: translateY(-1px); }
+.legend-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 rgba(120, 80, 0, 0.35), 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+.legend-button:disabled { opacity: 0.45; cursor: not-allowed; filter: grayscale(0.25); }
+
+.hunt-swap {
+  position: relative;
+  display: block;
+  width: 100%;
+  min-height: 1.7em;
+  line-height: 1.2;
+}
+.hunt-swap__face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+.hunt-swap__face.is-hidden { opacity: 0; transform: translateY(8px) scale(0.96); pointer-events: none; }
+.hunt-swap__face.is-shown { opacity: 1; transform: translateY(0) scale(1); }
+.hunt-swap__title { font-size: 1.2em; letter-spacing: 0.1em; text-transform: uppercase; }
+.hunt-swap__req {
+  font-size: 0.58em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.25;
+  max-width: 100%;
+  white-space: nowrap;
+}
+@keyframes huntPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+.hunt-swap__face.is-shown .hunt-swap__title { animation: huntPulse 1.15s ease-in-out 1; }
+
+/* Outcome modals */
+.prizewinner,
+.outcome-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal) !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  background: rgba(4, 5, 10, 0.62);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  background-image: none !important;
+  color: inherit;
+  font-size: inherit;
+  border: none;
+  box-shadow: none;
+  opacity: 1;
+  height: auto;
+  width: auto;
+}
+.outcome-card {
+  position: relative;
+  width: min(92vw, 440px);
+  max-height: min(86vh, 640px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: clamp(1.25rem, 3vw, 2rem);
+  border-radius: 22px;
+  border: 1px solid rgba(255, 214, 120, 0.35);
+  background-color: rgba(10, 12, 18, 0.94);
+  background-image:
+    linear-gradient(180deg, rgba(20, 16, 8, 0.45), rgba(8, 10, 16, 0.94)),
+    url("./assets/images/outcome-panel.webp");
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  color: var(--lg-cream);
+  font-family: var(--lg-ui);
+  font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+  line-height: 1.45;
+  text-align: center;
+  cursor: pointer;
+}
+.outcome-title {
+  font-family: var(--lg-font) !important;
+  font-size: clamp(1.15rem, 2.4vw, 1.55rem) !important;
+  font-weight: 800 !important;
+  color: var(--lg-gold) !important;
+  -webkit-text-fill-color: var(--lg-gold) !important;
+  background: none !important;
+  animation: none !important;
+  margin: 0 0 0.25rem;
+}
+.outcome-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--lg-cream);
+}
+.outcome-card.outcome-win .outcome-badge {
+  color: #062216;
+  background: linear-gradient(90deg, #6dffb0, #c8ffe0);
+  border-color: transparent;
+}
+.outcome-card.outcome-lose .outcome-badge {
+  color: #2a1014;
+  background: linear-gradient(90deg, #ffb4bd, #ffd0d5);
+  border-color: transparent;
+}
+.outcome-card.outcome-season .outcome-badge {
+  color: #1a1200;
+  background: linear-gradient(90deg, #ffe27a, #f5c542);
+  border-color: transparent;
+}
+.outcome-body { width: 100%; color: var(--lg-muted); }
+.outcome-body strong, .outcome-hl { color: var(--lg-gold); font-weight: 800; }
+.outcome-body .outcome-eth { color: var(--lg-ok); font-weight: 800; font-size: 1.15em; }
+.outcome-hint {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(247, 241, 230, 0.45);
+}
+
+/* Soft fate states without fighting original placement */
+.characterImage.fate-previous {
+  opacity: 0.55 !important;
+  filter: brightness(55%) blur(1px);
+}
+.characterImage.fate-match {
+  filter: drop-shadow(0 0 14px rgba(245, 197, 66, 0.45));
+}
+
+@media only screen and (max-width: 768px) {
+  :root {
+    --lg-hud-h: auto;
+    --lg-panel-h: clamp(64px, 12vh, 84px);
+    --lg-nft-w: clamp(58px, 16vw, 76px);
+    --lg-chrome-h: calc(var(--lg-panel-h) + 4.85rem);
+  }
+
+  /* Polished mobile chrome — selection tray, NFT dock, bottom tray */
+  .bottom-chrome {
+    position: fixed !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    grid-template-columns: var(--lg-nft-w) minmax(0, 1fr);
+    gap: 0.4rem;
+    align-items: stretch;
+    padding: 0.35rem 0.4rem max(0.45rem, env(safe-area-inset-bottom));
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      rgba(4, 5, 10, 0.5) 16%,
+      rgba(4, 5, 10, 0.9) 100%
+    );
+    z-index: var(--z-chrome) !important;
+  }
+
+  .bottom-chrome {
+    align-items: stretch !important;
+  }
+
+  .nft-dock {
+    justify-content: stretch;
+    align-self: stretch;
+    height: 100% !important;
+    min-height: 100%;
+  }
+
+  .bottom-chrome .nftImage,
+  .nft-dock .nftImage {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100%;
+    max-height: none;
+    border-radius: 12px !important;
+    border: 2px solid rgba(255, 255, 255, 0.9) !important;
+    object-fit: cover;
+    object-position: center center;
+  }
+
+  .bottom-chrome .nftText,
+  .nft-dock .nftText {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    width: 100% !important;
+    height: 100% !important;
+    min-height: 100%;
+    border-radius: 12px !important;
+  }
+
+  .chrome-main {
+    gap: 0.35rem;
+    min-width: 0;
+  }
+
+  /* Mouse selection tray: hug content, horizontal gold scroll */
+  .bottom-chrome .panel {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    top: auto !important;
+    display: inline-flex !important;
+    flex-wrap: nowrap !important;
+    grid-template-columns: none !important;
+    width: max-content !important;
+    max-width: 100% !important;
+    height: var(--lg-panel-h) !important;
+    padding: 0.32rem 0.42rem 0.45rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 14px !important;
+    background: linear-gradient(180deg, rgba(18, 20, 28, 0.97), rgba(8, 9, 14, 0.99)) !important;
+    opacity: 1 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    align-self: flex-start !important;
+    justify-content: flex-start !important;
+    gap: 0.3rem !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+    scrollbar-width: thin;
+    scrollbar-color: rgba(245, 197, 66, 0.85) rgba(255, 255, 255, 0.08);
+  }
+
+  .bottom-chrome .panel::-webkit-scrollbar {
+    height: 8px;
+  }
+  .bottom-chrome .panel::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 999px;
+    margin: 0 0.35rem 0.1rem;
+  }
+  .bottom-chrome .panel::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #c9a227, #f5c542, #ffe27a, #f5c542, #c9a227);
+    border-radius: 999px;
+    border: 1px solid rgba(80, 50, 0, 0.4);
+    box-shadow: 0 0 8px rgba(245, 197, 66, 0.5);
+  }
+
+  .bottom-chrome .selectedImage {
+    flex: 0 0 auto !important;
+    height: calc(var(--lg-panel-h) - 1.15rem) !important;
+    width: auto !important;
+    min-width: calc(var(--lg-panel-h) - 1.15rem);
+    aspect-ratio: 1 !important;
+    border-radius: 10px !important;
+    border: 2px solid transparent !important;
+    object-fit: cover;
+  }
+
+  /* See-through bottom HUD tray */
+  .bottom-chrome .tray {
+    position: relative !important;
+    bottom: auto !important;
+    left: auto !important;
+    top: auto !important;
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "stats play"
+      "pot play";
+    height: auto !important;
+    min-height: 3.9rem;
+    width: 100% !important;
+    padding: 0.35rem 0.45rem 0.4rem !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 14px !important;
+    background: linear-gradient(
+      180deg,
+      rgba(10, 12, 18, 0.26) 0%,
+      rgba(6, 7, 12, 0.36) 100%
+    ) !important;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    gap: 0.3rem 0.4rem;
+  }
+
+  .bottom-chrome .dashboard {
+    grid-area: pot;
+    display: flex !important;
+    width: auto !important;
+    height: auto !important;
+    min-width: 0;
+  }
+
+  .bottom-chrome .scoreboard {
+    grid-area: stats;
+    justify-content: flex-start !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 !important;
+    font-size: 0.68rem !important;
+    gap: 0.25rem;
+  }
+
+  .bottom-chrome .scoreboard .stat {
+    padding: 0.18rem 0.4rem;
+  }
+
+  .bottom-chrome .button-board {
+    grid-area: play;
+    width: auto !important;
+    height: auto !important;
+    justify-content: flex-end !important;
+  }
+
+  .bottom-chrome .legend-button,
+  .legend-button {
+    max-width: 42vw !important;
+    min-width: 7.4rem;
+    min-height: 2.75rem !important;
+    width: 100% !important;
+    height: auto !important;
+    font-size: 0.95rem !important;
+    padding: 0.35rem 0.55rem !important;
+    margin: 0 !important;
+    border-radius: 999px !important;
+    text-align: center;
+  }
+
+  .hunt-swap__req {
+    white-space: normal;
+    text-align: center;
+    font-size: 0.55em;
+  }
+
+  .notificationscancel,
+  .notifications {
+    top: max(4.5rem, calc(env(safe-area-inset-top, 0px) + 4rem));
+    right: 0.5rem;
+    width: min(94vw, 300px);
+  }
+
+  .outcome-card {
+    width: min(94vw, 400px);
+    padding: 1.1rem 1rem 1.25rem;
   }
 }

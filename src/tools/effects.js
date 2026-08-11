@@ -175,7 +175,7 @@ import Persia from '../assets/images/web/LEGEND/Heroes/Persia.webp';
 import Scot from '../assets/images/web/LEGEND/Heroes/Scot.webp';
 import Siam from '../assets/images/web/LEGEND/Heroes/Siam.webp';
 
-/* Legendary Choices */
+/* Legendary Choices (selection tray + center portrait) */
 import LongGunGary from '../assets/images/web/LEGEND/Choices/LongGunGary.webp';
 import BazooMacho from '../assets/images/web/LEGEND/Choices/BazooMacho.webp';
 import BossLugo from '../assets/images/web/LEGEND/Choices/BossLugo.webp';
@@ -193,6 +193,26 @@ import RockyLaw from '../assets/images/web/LEGEND/Choices/RockyLaw.webp';
 import SassyLassie from '../assets/images/web/LEGEND/Choices/SassyLassie.webp';
 import SoberTaka from '../assets/images/web/LEGEND/Choices/SoberTaka.webp';
 import SunnySide from '../assets/images/web/LEGEND/Choices/SunnySide.webp';
+
+/* Legendary Matches (right portrait — only after a play result) */
+import MatchLongGunGary from '../assets/images/web/LEGEND/Matches/LongGunGary.webp';
+import MatchBazooMacho from '../assets/images/web/LEGEND/Matches/BazooMacho.webp';
+import MatchBossLugo from '../assets/images/web/LEGEND/Matches/BossLugo.webp';
+import MatchCJ from '../assets/images/web/LEGEND/Matches/CJ.webp';
+import MatchCornyNorma from '../assets/images/web/LEGEND/Matches/CornyNorma.webp';
+import MatchDevilMonty from '../assets/images/web/LEGEND/Matches/DevilMonty.webp';
+import MatchFreddyWild from '../assets/images/web/LEGEND/Matches/FreddyWild.webp';
+import MatchGROM from '../assets/images/web/LEGEND/Matches/GROM.webp';
+import MatchMadameFlo from '../assets/images/web/LEGEND/Matches/MadameFlo.webp';
+import MatchManicMary from '../assets/images/web/LEGEND/Matches/ManicMary.webp';
+import MatchMcBrad from '../assets/images/web/LEGEND/Matches/McBrad.webp';
+import MatchNoNameSally from '../assets/images/web/LEGEND/Matches/NoNameSally.webp';
+import MatchOneLineSheila from '../assets/images/web/LEGEND/Matches/OneLineSheila.webp';
+import MatchRockyLaw from '../assets/images/web/LEGEND/Matches/RockyLaw.webp';
+import MatchSassyLassie from '../assets/images/web/LEGEND/Matches/SassyLassie.webp';
+import MatchSoberTaka from '../assets/images/web/LEGEND/Matches/SoberTaka.webp';
+import MatchSunnySide from '../assets/images/web/LEGEND/Matches/SunnySide.webp';
+import MatchK9 from '../assets/images/web/LEGEND/Matches/K9.webp';
 
 import sos_audit from '../assets/images/audits/SOS_AUDIT.webp';
 import tos_audit from '../assets/images/audits/TOS_AUDIT.webp';
@@ -648,8 +668,30 @@ const LegendaryChoices = {
   SunnySide
 }
 
+/** Match-art counterparts (right stage). Keys align with LegendaryChoices where possible. */
+const LegendaryMatches = {
+  BazooMacho: MatchBazooMacho,
+  BossLugo: MatchBossLugo,
+  CJ: MatchCJ,
+  CornyNorma: MatchCornyNorma,
+  DevilMonty: MatchDevilMonty,
+  FreddyWild: MatchFreddyWild,
+  GROM: MatchGROM,
+  MadameFlo: MatchMadameFlo,
+  ManicMary: MatchManicMary,
+  McBrad: MatchMcBrad,
+  NoNameSally: MatchNoNameSally,
+  LongGunGary: MatchLongGunGary,
+  OneLineSheila: MatchOneLineSheila,
+  RockyLaw: MatchRockyLaw,
+  SassyLassie: MatchSassyLassie,
+  SoberTaka: MatchSoberTaka,
+  SunnySide: MatchSunnySide,
+  K9: MatchK9,
+}
+
 export { backgroundMusic, soundEffects, visualEffects, documents, 
   foregroundStoryboards, foregroundHeroes, foregroundVillains, literaryData, miscImages,
   foregroundPatrons, foregroundArtifacts, foregroundStoryboardsMobile, foregroundHeroesMobile, 
   foregroundVillainsMobile, foregroundPatronsMobile, foregroundArtifactsMobile,
-  LegendaryHeroes, LegendaryChoices, auditArray, partnerArray };
+  LegendaryHeroes, LegendaryChoices, LegendaryMatches, auditArray, partnerArray };

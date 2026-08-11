@@ -10,11 +10,10 @@ import { useActiveAccount, useActiveWallet, useSendTransaction, useWalletBalance
 import { contract, blockchain, thirdwebLegendaryContract, 
   provider, legendaryContract, formatNumber, base, client, abi,
   cashcatContract, randomShuffle, thirdwebCASHCATContract, truncateAddress } from "./tools/utils";
-import { RxDividerVertical } from "react-icons/rx";
 import { MdToggleOn, MdCancel } from 'react-icons/md';
 import { BsEmojiHeartEyesFill, BsEmojiDizzyFill } from 'react-icons/bs';
-import { miscImages, LegendaryHeroes, LegendaryChoices,
-  soundEffects, foregroundStoryboards } from "./tools/effects";
+import { miscImages, LegendaryHeroes, LegendaryChoices, LegendaryMatches,
+  soundEffects, foregroundStoryboards, foregroundStoryboardsMobile } from "./tools/effects";
 import ReactPlayer from 'react-player';
 import Partner from './partner';
 
@@ -26,6 +25,57 @@ const toBigInt = (v) => {
   } catch {
     return 0n;
   }
+};
+
+/** Comic-style speech chip tints (bg + border + soft glow) */
+const SPEECH_TINTS = [
+  { bg: "linear-gradient(165deg, rgba(255,252,245,0.98), rgba(255,236,190,0.96))", border: "rgba(200,140,40,0.45)", glow: "rgba(245,197,66,0.25)" },
+  { bg: "linear-gradient(165deg, rgba(255,245,250,0.98), rgba(255,210,225,0.96))", border: "rgba(220,80,120,0.4)", glow: "rgba(255,120,160,0.22)" },
+  { bg: "linear-gradient(165deg, rgba(240,250,255,0.98), rgba(190,230,255,0.96))", border: "rgba(40,130,200,0.4)", glow: "rgba(80,180,255,0.22)" },
+  { bg: "linear-gradient(165deg, rgba(240,255,245,0.98), rgba(190,245,210,0.96))", border: "rgba(40,160,90,0.4)", glow: "rgba(80,220,140,0.22)" },
+  { bg: "linear-gradient(165deg, rgba(248,242,255,0.98), rgba(220,200,255,0.96))", border: "rgba(120,80,200,0.4)", glow: "rgba(160,120,255,0.22)" },
+  { bg: "linear-gradient(165deg, rgba(255,248,240,0.98), rgba(255,220,180,0.96))", border: "rgba(220,120,40,0.4)", glow: "rgba(255,160,80,0.22)" },
+  { bg: "linear-gradient(165deg, rgba(255,250,255,0.98), rgba(255,210,245,0.96))", border: "rgba(200,60,160,0.4)", glow: "rgba(255,100,200,0.2)" },
+  { bg: "linear-gradient(165deg, rgba(240,255,255,0.98), rgba(180,245,245,0.96))", border: "rgba(20,160,160,0.4)", glow: "rgba(60,220,220,0.2)" },
+];
+
+/**
+ * Random fixed position above a stage lane + random tint.
+ * lane: 'hero' | 'choice'
+ */
+const randomSpeechChipStyle = (lane, mobile) => {
+  const tint = SPEECH_TINTS[randomShuffle(Math.max(SPEECH_TINTS.length - 1, 0))] || SPEECH_TINTS[0];
+  let top;
+  let left;
+  if (lane === "hero") {
+    // Above left hero portrait
+    if (mobile) {
+      top = 4 + Math.random() * 14; // 4–18vh
+      left = 2 + Math.random() * 28; // 2–30vw
+    } else {
+      top = 2 + Math.random() * 18; // 2–20vh
+      left = 1 + Math.random() * 22; // 1–23vw
+    }
+  } else {
+    // Above center/right choice portrait
+    if (mobile) {
+      top = 10 + Math.random() * 16; // 10–26vh
+      left = 38 + Math.random() * 30; // 38–68vw
+    } else {
+      top = 2 + Math.random() * 20; // 2–22vh
+      left = 28 + Math.random() * 28; // 28–56vw
+    }
+  }
+  // slight rotation for comic pop
+  const rot = (Math.random() * 6 - 3).toFixed(2); // -3° … +3°
+  return {
+    top: `${top.toFixed(1)}vh`,
+    left: `${left.toFixed(1)}vw`,
+    transform: `rotate(${rot}deg)`,
+    background: tint.bg,
+    borderColor: tint.border,
+    boxShadow: `0 8px 22px rgba(0,0,0,0.32), 0 0 18px ${tint.glow}, inset 0 0 0 1px rgba(255,255,255,0.35)`,
+  };
 };
 
 /** Safe ether formatting — never throws on null/undefined. */
@@ -84,10 +134,8 @@ const Legends = ({setComponent}) => {
   const [sequenceNumber, setSequenceNumber] = useState(null);
   const [randomResult, setRandomResult] = useState(null);
   const [matchImage, setMatchImage] = useState(null);
-  const [heroMappings, setHeroMappings] = useState({
-    byNumber: {},
-    bySrc: {}
-  });
+  /** Which stage portrait is in front: 'hero' | 'choice' | 'match' */
+  const [stageFocus, setStageFocus] = useState('hero');
   const [error, setError] = useState(null);
   const [errorMessage, setErrorMessage] = useState("");
   const [errorMessageVisible, setErrorMessageVisible] = useState(false);
@@ -100,6 +148,10 @@ const Legends = ({setComponent}) => {
   const [names, setNames] = useState({hero: null, villain: null});
   const [choiceImage, setChoiceImage] = useState(null);
   const [nftDisplay, setNFTDisplay] = useState(false);
+  /** Full metadata JSON for the active Cashcat (from ipfsCache). */
+  const [nftMeta, setNftMeta] = useState(null);
+  /** Lightbox: false = image face, true = attribute info face. */
+  const [nftFlipInfo, setNftFlipInfo] = useState(false);
   const isMobile = useMediaQuery({ maxWidth: 767 });
   const [feeType, setFeeType] = useState(null);
   // randomResult = firstDraw; playId = secondDraw. Win when they match.
@@ -142,9 +194,15 @@ const Legends = ({setComponent}) => {
   });
   const [heroSpeech, setHeroSpeech] = useState({hero: null, nohero: null});
   const [replySpeech, setReplySpeech] = useState({hero: null, nohero: null});
+  /** Random placement + color tint for comic speech chips */
+  const [speechChipStyle, setSpeechChipStyle] = useState({ hero: null, reply: null });
   const [userRandomNumero, setUserRandomNumero] = useState(null);
   const pendingPlaySeed = useRef(null); // bytes32 seed awaiting receipt parse
   const processedTxHash = useRef(null); // avoid double-handling the same receipt
+  /** Choice key locked in when Hunt is submitted — used only for match reveal, never on tray reselection. */
+  const choiceKeyAtPlayRef = useRef(null);
+  /** Dedup match reveal for a given result pair. */
+  const lastMatchRevealKey = useRef(null);
 
   function seasonSelector () {
     const cachedCounter = localStorage.getItem('seasonCounter');
@@ -162,11 +220,15 @@ const Legends = ({setComponent}) => {
       setSpeechBubble({hero: bubbleIndex + 1, nohero: null});
       const heroSpeechIndex = randomShuffle(speeches.nftSpeech.length);
       setHeroSpeech({hero: speeches.nftSpeech[heroSpeechIndex], nohero: null});
+      setSpeechChipStyle((s) => ({ ...s, hero: randomSpeechChipStyle("hero", isMobile) }));
+      setStageFocus('hero');
     } else if (!(nft > 0) && speeches.noNftSpeech?.length) {
       const bubbleIndex = randomShuffle(6);
       setSpeechBubble({hero: null, nohero: bubbleIndex + 1});
       const heroSpeechIndex = randomShuffle(speeches.noNftSpeech.length);
       setHeroSpeech({hero: null, nohero: speeches.noNftSpeech[heroSpeechIndex]});
+      setSpeechChipStyle((s) => ({ ...s, hero: randomSpeechChipStyle("hero", isMobile) }));
+      setStageFocus('hero');
     }
   }
 
@@ -203,7 +265,8 @@ const Legends = ({setComponent}) => {
   }
 
   const fetchAmenities = () => {
-    const allSources = Object.values(foregroundStoryboards);
+    const boardMap = isMobile ? foregroundStoryboardsMobile : foregroundStoryboards;
+    const allSources = Object.values(boardMap || foregroundStoryboards);
     if (!allSources.length) return;
     const imageIndex = randomShuffle(Math.max(allSources.length - 1, 0));
     setBackground(allSources[imageIndex]);
@@ -254,110 +317,209 @@ const Legends = ({setComponent}) => {
     playWrong();    
   }
 
-  const assignRandomNumbers = (_choice, _result, _choiceImage) => {
-    // 1. Extract all image sources and keys from LegendaryChoices
-    const sources = Object.values(LegendaryChoices);
-    const keys = Object.keys(LegendaryChoices);
+  /**
+   * Reveal the right-side Match portrait from on-chain draws ONLY.
+   * - Never called from selectChoice / tray clicks.
+   * - Win (firstDraw === secondDraw): Matches art for the locked-in choice key.
+   * - Lose: a different Matches portrait (not the selected choice).
+   * Choice center image stays LegendaryChoices and is never written here.
+   */
+  const revealMatchFromResult = (firstDraw, secondDraw, choiceKey) => {
+    const a = Number(firstDraw);
+    const b = secondDraw != null ? Number(secondDraw) : NaN;
+    const revealId = `${a}|${b}|${choiceKey || ''}`;
+    if (lastMatchRevealKey.current === revealId) return;
+    lastMatchRevealKey.current = revealId;
 
-    // 2. Initialize mappings
-    const byNumber = {};
-    const bySrc = {};
+    const matchEntries = Object.entries(LegendaryMatches);
+    if (!matchEntries.length) return;
 
-    // 3. Manually assign _choice to _choiceImage (always)
-    byNumber[_choice] = _choiceImage;
-    bySrc[_choiceImage] = _choice;
+    const isWin =
+      !Number.isNaN(a) && !Number.isNaN(b) && a === b;
 
-    // 4. Handle _result (if different from _choice)
-    if (_result !== _choice) {
-      // Find a random image that isn't _choiceImage
-      const availableSources = sources.filter(src => src !== _choiceImage);
-      const randomIndex = randomShuffle(availableSources.length - 1);
-      const resultImage = availableSources[randomIndex];
-
-      byNumber[_result] = resultImage;
-      bySrc[resultImage] = _result;
+    if (isWin && choiceKey && LegendaryMatches[choiceKey]) {
+      setMatchImage(LegendaryMatches[choiceKey]);
+      setStageFocus('match');
+      return;
     }
 
-    // 5. Assign random numbers to remaining images (excluding assigned ones)
-    const usedNumbers = new Set([_choice, _result]);
-    const usedImages = new Set([_choiceImage, byNumber[_result]]);
-
-    sources.forEach((src) => {
-      if (!usedImages.has(src)) {
-        let randomNum;
-        do {
-          randomNum = randomShuffle(50); // Generate 0-50
-        } while (usedNumbers.has(randomNum));
-
-        byNumber[randomNum] = src;
-        bySrc[src] = randomNum;
-        usedNumbers.add(randomNum);
-      }
-    });
-
-    // 6. Update state
-    setHeroMappings({ byNumber, bySrc });
+    // Lose (or missing choice key): pick any Matches art except the selected one
+    const others = matchEntries.filter(([k]) => k !== choiceKey);
+    const pool = others.length > 0 ? others : matchEntries;
+    const idx = randomShuffle(Math.max(pool.length - 1, 0));
+    setMatchImage(pool[idx][1]);
+    setStageFocus('match');
   };
-
-  useEffect(() => {
-    if (heroMappings.byNumber[randomResult]) {
-    const getMatch = heroMappings.byNumber[randomResult];
-    setMatchImage(getMatch);
-    }
-  }, [heroMappings.byNumber]);
 
   const closeDisplay = () => {
     setNFTDisplay(false);
-  }
+    setNftFlipInfo(false);
+  };
 
+  /** Pull Name / Profit Index / Vicinity (and helpers) from metadata attributes. */
+  const getNftFacts = () => {
+    const data = nftMeta;
+    const attrs = Array.isArray(data?.attributes) ? data.attributes : [];
+    const findAttr = (...patterns) => {
+      for (const re of patterns) {
+        const hit = attrs.find((a) => re.test(String(a?.trait_type || "")));
+        if (hit != null && hit.value != null && String(hit.value).trim() !== "") {
+          return String(hit.value).trim();
+        }
+      }
+      return null;
+    };
+    return {
+      name:
+        findAttr(/^name$/i, /\bname\b/i) ||
+        (data?.name && String(data.name).trim()) ||
+        names.hero ||
+        "—",
+      profitIndex:
+        findAttr(/profit\s*index/i, /\bprofit\b/i, /discount/i) || "—",
+      vicinity:
+        findAttr(/vicinity/i, /\blocation\b/i, /\bzone\b/i, /district/i, /region/i) ||
+        "—",
+      edition: nft > 0 ? nft : null,
+      description: data?.description ? String(data.description).trim() : null,
+      // leftover attributes for optional extra context
+      extras: attrs.filter((a) => {
+        const t = String(a?.trait_type || "");
+        return (
+          !/^name$/i.test(t) &&
+          !/\bname\b/i.test(t) &&
+          !/profit/i.test(t) &&
+          !/vicinity/i.test(t) &&
+          !/location|zone|district|region/i.test(t)
+        );
+      }),
+    };
+  };
+
+  /**
+   * Center portrait only — tray selection must NEVER touch matchImage.
+   * Matches update exclusively via revealMatchFromResult after a play result.
+   */
   const selectChoice = (_key, _choice) => {
     if (loading) return;
     if (!verifyConnection()) return;
     setChoiceImage(_choice);
-    setNames({...names, villain: _key});
+    setNames((prev) => ({ ...prev, villain: _key }));
+    setStageFocus('choice'); // bring choice portrait to front while selecting
     playThunder();
   }
 
-  const fetchHero = async() => {
-    try {  
-      if (nft > 0 ) {
-        const response = await fetch(`https://daemon.penny4thots.my/ipfsCache/${nft}.json`, {
-          method: "GET",
-        });
-    
-        if (!response.ok) {
-          console.log("Network response was not ok");
-          return; // Exit if response is not ok
-        }
-    
-        const heroData = await response.json();
+  /** Fate label for the right (match) portrait — no roll numbers on Choices. */
+  const getFateLabel = () => {
+    if (playOutcome === 'win') return 'Match';
+    if (loading && matchImage) return 'Your Previous Fate';
+    return 'Your Fate';
+  };
 
-        // Find the HERO trait
-        const heroTrait = heroData.attributes.find(
-          attr => attr.trait_type === "Cashcats"
-        );
-        
-        if (heroTrait) {
-          const heroName = heroTrait.value;
-          
-          // Remove any numbering or titles from the hero name (like "Androcles Kronjenidas I" -> "Androcles")
-          const baseHeroName = heroName.split(' ')[0];
-          
-          // Find matching image in foregroundHeroes
-          const matchedHeroImage = LegendaryHeroes[baseHeroName];
-          
-          if (matchedHeroImage) {
-            setHeroImage(matchedHeroImage);
-            setNames({...names, hero: baseHeroName});
-          }
-        }
-      } else {
-          setNames({...names, hero: "Unidentified"});
-          setHeroImage(miscImages.noHeroFound);
+  /** Resolve a LegendaryHeroes key from metadata text (case/spacing tolerant). */
+  const resolveHeroKey = (raw) => {
+    if (raw == null || raw === "") return null;
+    const keys = Object.keys(LegendaryHeroes);
+    const text = String(raw).trim();
+    const first = text.split(/[\s/_-]+/)[0] || text;
+    // exact / first-token match
+    const exact = keys.find(
+      (k) => k.toLowerCase() === text.toLowerCase() || k.toLowerCase() === first.toLowerCase()
+    );
+    if (exact) return exact;
+    // metadata contains hero key (or reverse)
+    const partial = keys.find(
+      (k) =>
+        text.toLowerCase().includes(k.toLowerCase()) ||
+        k.toLowerCase().includes(first.toLowerCase())
+    );
+    return partial || null;
+  };
+
+  /** Always show a left-side hero portrait — never leave the stage blank. */
+  const applyHeroFallback = (label = "Unidentified") => {
+    setNames((n) => ({ ...n, hero: label }));
+    setHeroImage(miscImages.noHeroFound || Object.values(LegendaryHeroes)[0] || null);
+    setNftMeta(null);
+  };
+
+  /**
+   * Load legendary hero art for a Cashcat token id.
+   * @param {number} [tokenIdOverride] use explicit id (from fetchNFT) to avoid stale state races
+   */
+  const fetchHero = async (tokenIdOverride) => {
+    const id =
+      tokenIdOverride !== undefined && tokenIdOverride !== null
+        ? Number(tokenIdOverride)
+        : Number(nft);
+
+    try {
+      if (!(id > 0)) {
+        applyHeroFallback("Unidentified");
+        return;
       }
-      
+
+      const response = await fetch(
+        `https://daemon.penny4thots.my/ipfsCache/${id}.json`,
+        { method: "GET" }
+      );
+
+      if (!response.ok) {
+        console.log("Hero metadata response not ok:", response.status);
+        setNftMeta(null);
+        // Owned NFT but metadata flaky — still show a legendary portrait so stage isn't empty
+        const keys = Object.keys(LegendaryHeroes);
+        const k = keys[randomShuffle(Math.max(keys.length - 1, 0))] || keys[0];
+        if (k && LegendaryHeroes[k]) {
+          setHeroImage(LegendaryHeroes[k]);
+          setNames((n) => ({ ...n, hero: k }));
+        } else {
+          applyHeroFallback("Unidentified");
+        }
+        return;
+      }
+
+      const heroData = await response.json();
+      setNftMeta(heroData);
+      const attrs = Array.isArray(heroData?.attributes) ? heroData.attributes : [];
+
+      // Prefer Cashcat breed/trait; fall back to name / any trait value that matches a hero key
+      const heroTrait =
+        attrs.find((attr) => /cashcat/i.test(String(attr?.trait_type || ""))) ||
+        attrs.find((attr) => /breed|type|hero|character/i.test(String(attr?.trait_type || "")));
+
+      let key =
+        resolveHeroKey(heroTrait?.value) ||
+        resolveHeroKey(heroData?.name) ||
+        resolveHeroKey(heroData?.Hero) ||
+        null;
+
+      if (!key) {
+        for (const attr of attrs) {
+          key = resolveHeroKey(attr?.value);
+          if (key) break;
+        }
+      }
+
+      if (key && LegendaryHeroes[key]) {
+        setHeroImage(LegendaryHeroes[key]);
+        setNames((n) => ({ ...n, hero: key }));
+        return;
+      }
+
+      // Last resort: deterministic pick from token id so first paint is never blank
+      const keys = Object.keys(LegendaryHeroes);
+      if (keys.length) {
+        const k = keys[Math.abs(id) % keys.length];
+        setHeroImage(LegendaryHeroes[k]);
+        setNames((n) => ({ ...n, hero: k }));
+      } else {
+        applyHeroFallback("Unidentified");
+      }
     } catch (err) {
       console.log("Error fetching NFT data: ", err);
+      setNftMeta(null);
+      applyHeroFallback("Unidentified");
     }
   };
 
@@ -538,6 +700,7 @@ const Legends = ({setComponent}) => {
   const fetchNFT = async() => {
     if (!account?.address) {
       setNFT(0);
+      applyHeroFallback("Unidentified");
       await fetchGameData(ethers.ZeroAddress, 0);
       return;
     }
@@ -551,6 +714,7 @@ const Legends = ({setComponent}) => {
       const tokenId = Number(call2);
       if (!Number.isFinite(tokenId) || tokenId <= 0) {
         setNFT(0);
+        applyHeroFallback("Unidentified");
         await fetchGameData(account.address, 0);
         return;
       }
@@ -561,22 +725,27 @@ const Legends = ({setComponent}) => {
           : Boolean(call3);
         if (isBlacklisted) { 
           setNFT(0);
+          applyHeroFallback("Unidentified");
           // one legend RPC: global + non-holder quote
           await fetchGameData(account.address, 0);
         } else {
           setNFT(tokenId);
+          // Load hero immediately with explicit id (avoids waiting on nft state race)
+          await fetchHero(tokenId);
           // one legend RPC: global + holder quote / power bonus / fees
           await fetchGameData(account.address, tokenId);
         }
 
      } else {
       setNFT(0);
+      applyHeroFallback("Unidentified");
       await fetchGameData(account.address, 0);
     }
 
     } catch (err) {
       console.log("error fetching NFTs: ", err);
       setNFT(0);
+      applyHeroFallback("Unidentified");
       // Still try global quote so play board can load
       try {
         await fetchGameData(account?.address || ethers.ZeroAddress, 0);
@@ -595,12 +764,13 @@ const Legends = ({setComponent}) => {
     setUserRandomNumero(null);
     setTransactionReceipt(null);
     setErrorMessageVisible(false);
-    setHeroMappings({byNumber: {}, bySrc: {}});
     setDidWin(false);
     setWinAmount(null);
     setPlayOutcome(null);
     setMatchImage(null);
     pendingPlaySeed.current = null;
+    choiceKeyAtPlayRef.current = null;
+    lastMatchRevealKey.current = null;
   }
 
   /**
@@ -625,6 +795,10 @@ const Legends = ({setComponent}) => {
     } else {
       setWinAmount(null);
     }
+
+    // Match portrait updates HERE only — never when reselecting a choice
+    const lockedKey = choiceKeyAtPlayRef.current || names.villain;
+    revealMatchFromResult(a, b, lockedKey);
 
     isWalletParameter = false;
     setLoading(false);
@@ -856,9 +1030,15 @@ const Legends = ({setComponent}) => {
     setPlayOutcome(null);
     setDidWin(false);
     setWinAmount(null);
-    setMatchImage(null);
+    // Lock the choice used for THIS hunt (tray can still change visuals for next hunt only)
+    choiceKeyAtPlayRef.current = names.villain;
+    lastMatchRevealKey.current = null;
+    // Keep previous matchImage until the new play reveals — only then replace it.
+    // Clear roll numbers so UI shows "Your Previous Fate" while hunting.
     setRandomResult(null);
     setPlayId(null);
+    // Hunting focuses the fate/match lane (previous or pending result)
+    setStageFocus('match');
 
     // User-supplied entropy mixed on-chain with block.prevrandao / nonce / etc.
     const userRandomNumber = ethers.hexlify(ethers.randomBytes(32));
@@ -1063,26 +1243,39 @@ const Legends = ({setComponent}) => {
   // Bootstrap contract helper whenever wallet connects/disconnects.
   // Gate interactive fee/play UI on dataReady so null fields never hit the render path.
   useEffect(() => {
-    setHeroImage(null);
+    // Keep a placeholder portrait during reload so the left stage is never blank
+    applyHeroFallback(account ? "…" : "Unidentified");
     setPlayOutcome(null);
     setTokenBalance({ Wei: null, Mil: null, K: null, Data: null });
     isWalletParameter = false;
     if (!account) {
       setWalletBalance(null);
       setNFT(null);
+      applyHeroFallback("Unidentified");
     }
     bootstrapGame();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [account?.address]);
 
+  // Safety net: if nft state settles after bootstrap paths, still resolve hero art
   useEffect(() => {
-    if (account && nft !== null && nft > 0) {
-      fetchHero(); 
+    if (!account) return;
+    if (nft !== null && nft > 0) {
+      fetchHero(nft);
     } else if (nft === 0) {
-      setNames((n) => ({ ...n, hero: "Unidentified" }));
-      setHeroImage(miscImages.noHeroFound);
+      applyHeroFallback("Unidentified");
     }
-  }, [nft, account]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nft, account?.address]);
+
+  // Ephemeral toasts — auto-hide after 5s unless the user dismisses sooner
+  useEffect(() => {
+    if (!errorMessageVisible) return undefined;
+    const t = setTimeout(() => {
+      setErrorMessageVisible(false);
+    }, 5000);
+    return () => clearTimeout(t);
+  }, [errorMessageVisible, errorMessage]);
   
   useEffect(() => {
     if (account) {        
@@ -1101,18 +1294,17 @@ const Legends = ({setComponent}) => {
     }
   }, [loading]);
 
-  // After on-chain roll lands: map lucky number (playId) + rolled result onto choice/fate art
+  // After a result is applied: soft UI feedback only (match image is set in applyPlayOutcome)
   useEffect(() => {
-    if (playId != null && randomResult != null && choiceImage) {
-      assignRandomNumbers(playId, randomResult, choiceImage);
-      playThunder();
-      setLoading(false);
-      // Soft refresh NFT / background without wiping outcome state
-      const allSources = Object.values(foregroundStoryboards);
-      const imageIndex = randomShuffle(allSources.length - 1);
-      setBackground(allSources[imageIndex]);
-    }
-  }, [playId, randomResult]);
+    if (playId == null || randomResult == null) return;
+    playThunder();
+    setLoading(false);
+    const boardMap = isMobile ? foregroundStoryboardsMobile : foregroundStoryboards;
+    const allSources = Object.values(boardMap || foregroundStoryboards);
+    if (!allSources.length) return;
+    const imageIndex = randomShuffle(Math.max(allSources.length - 1, 0));
+    setBackground(allSources[imageIndex]);
+  }, [playId, randomResult, isMobile]);
 
   useEffect(() => {
     if (speeches.nftReplySpeech?.length && choiceImage && nft > 0) {
@@ -1120,13 +1312,17 @@ const Legends = ({setComponent}) => {
       setReplyBubble({hero: replyBubbleIndex + 1, nohero: null});
       const heroReplySpeechIndex = randomShuffle(speeches.nftReplySpeech.length);
       setReplySpeech({hero: speeches.nftReplySpeech[heroReplySpeechIndex], nohero: null});
+      setSpeechChipStyle((s) => ({ ...s, reply: randomSpeechChipStyle("choice", isMobile) }));
+      setStageFocus('choice');
     } else if (speeches.noNftReplySpeech?.length && choiceImage && !(nft > 0)) {
       const replyBubbleIndex = randomShuffle(6);
       setReplyBubble({hero: null, nohero: replyBubbleIndex + 1});
       const heroReplySpeechIndex = randomShuffle(speeches.noNftReplySpeech.length);
       setReplySpeech({hero: null, nohero: speeches.noNftReplySpeech[heroReplySpeechIndex]});
+      setSpeechChipStyle((s) => ({ ...s, reply: randomSpeechChipStyle("choice", isMobile) }));
+      setStageFocus('choice');
     }
-  },[choiceImage]);
+  }, [choiceImage, isMobile]);
 
   useEffect(() => {
     const getSpeeches = async () => {
@@ -1206,6 +1402,19 @@ const Legends = ({setComponent}) => {
   const challengersShown = gameData?.challengers || DEFAULT_CHALLENGERS;
   const feePreview = getFeePreview();
 
+  // Hunt! button cycles every 5s between call-to-action and fee requirements
+  const [showHuntReq, setShowHuntReq] = useState(false);
+  useEffect(() => {
+    if (loading || dataLoading || !dataReady || !feePreview) {
+      setShowHuntReq(false);
+      return undefined;
+    }
+    const id = setInterval(() => {
+      setShowHuntReq((prev) => !prev);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [loading, dataLoading, dataReady, feePreview?.eth, feePreview?.ccc]);
+
   return (
     <div className='legends-container' style={{backgroundImage: `url(${background})`}}> 
         <ReactPlayer
@@ -1220,7 +1429,7 @@ const Legends = ({setComponent}) => {
       {/* Full-board gate until getGameData has resolved at least once */}
       {(dataLoading && !dataReady) && (
         <div className="centrify" style={{ zIndex: 50, pointerEvents: 'auto' }}>
-          <div className="waveanimator quote goldtext" style={{ fontSize: '1.2rem', padding: '1rem' }}>
+          <div className="goldtext" style={{ fontSize: '1.15rem', padding: '1rem', textAlign: 'center' }}>
             Loading game data…
           </div>
         </div>
@@ -1243,51 +1452,66 @@ const Legends = ({setComponent}) => {
         </div>
       )}
 
-      <div className="nft">
-        {(nft === null || dataLoading) && <div className="nftText">...loading</div>} 
-        {nft > 0 && !dataLoading && <img src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`} alt="NFT" className="nftImage" onClick={() => setNFTDisplay(true)} />}
-        {nft === 0 && !dataLoading && <img src={require('./assets/images/nonftsfound.webp')} alt="NFT" className="nftImage" onClick={noPlayNFT} />}
-      </div>
-      {heroImage && 
+      {/* Original hero / choice / match placement (fixed coords from your design) */}
+      {/* Always paint a left portrait so first load is never blank */}
       <>
-        <img src={heroImage} className={`characterImage index10 ${visualEffect.nft ? 'denied-shake' : ''}`} />
+        <img
+          src={heroImage || miscImages.noHeroFound}
+          className={`characterImage index10 ${visualEffect.nft ? 'denied-shake' : ''} ${stageFocus === 'hero' ? 'stage-focus' : ''}`}
+          alt={names.hero || 'Hero'}
+          onClick={() => setStageFocus('hero')}
+          style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+        />
         <div className="vs"><img src={require("./assets/images/vs.gif")} alt="vs" className="vsImage" /></div>
-        <div className="heroText">YOUR HERO <br/> 
-          {nft ? <span className="waveanimator quote ledger">on Crusade {nft}</span> : <span className="waveanimator quote ledger" align='right'>unholy crusader</span>}
+        <div className="heroText">YOUR HERO <br/>
+          {nft > 0
+            ? <span className="waveanimator quote ledger">on Hunter {nft}</span>
+            : <span className="waveanimator quote ledger">rouge hunt</span>}
         </div>
-        <div className="heroName waveanimator regal">{names.hero}</div>
+        {names.hero && names.hero !== "…" && (
+          <div className={`heroName waveanimator regal ${stageFocus === 'hero' ? 'stage-focus-label' : ''}`}>{names.hero}</div>
+        )}
       </>
-      }
       {choiceImage && <>
-        <img src={choiceImage} className="characterImage index11" />
-        <div className="villainName waveanimator forest">{names.villain}</div>
+        <img
+          src={choiceImage}
+          className={`characterImage index11 ${stageFocus === 'choice' ? 'stage-focus' : ''}`}
+          alt={names.villain || 'Choice'}
+          onClick={() => setStageFocus('choice')}
+          style={{ cursor: 'pointer', pointerEvents: 'auto' }}
+        />
+        <div className={`villainName waveanimator forest ${stageFocus === 'choice' ? 'stage-focus-label' : ''}`}>{names.villain}</div>
       </>
       }
       {choiceImage && 
       <>
         {speechBubble.hero && 
-        <>
-          {!isMobile && <img src={require(`./assets/images/web/LEGEND/SPEECH/Speech_bubbles_hero_${speechBubble.hero}.webp`)} className="characterImage index10 index13" />}
-          <div className={`characterImage index10 index13 speechText bubble${speechBubble.hero}`} >{heroSpeech.hero}</div> 
-        </>
+          <div
+            className={`speechText speech-chip speech-chip--hero${stageFocus === 'hero' ? ' stage-focus' : ''}`}
+            style={speechChipStyle.hero || undefined}
+            onClick={() => setStageFocus('hero')}
+          >{heroSpeech.hero}</div>
         } 
         {speechBubble.nohero && 
-        <>
-          {!isMobile && <img src={require(`./assets/images/web/LEGEND/SPEECH/Speech_bubbles_nohero_${speechBubble.nohero}.webp`)} className="characterImage index10 index13" />}
-          <div className={`characterImage index10 index13 speechText bubblenoob${speechBubble.nohero}`} >{heroSpeech.nohero}</div> 
-        </>
+          <div
+            className={`speechText speech-chip speech-chip--hero${stageFocus === 'hero' ? ' stage-focus' : ''}`}
+            style={speechChipStyle.hero || undefined}
+            onClick={() => setStageFocus('hero')}
+          >{heroSpeech.nohero}</div>
         } 
         {replyBubble.hero && 
-        <>
-          {!isMobile && <img src={require(`./assets/images/web/LEGEND/SPEECH/Speech_bubbles_godville_${replyBubble.hero}.webp`)} className="characterImage index11 index13" />}
-          <div className={`characterImage index11 index13 speechText replybubble${replyBubble.hero}`} >{replySpeech.hero}</div> 
-        </>
+          <div
+            className={`speechText speech-chip speech-chip--choice${stageFocus === 'choice' ? ' stage-focus' : ''}`}
+            style={speechChipStyle.reply || undefined}
+            onClick={() => setStageFocus('choice')}
+          >{replySpeech.hero}</div>
         } 
         {replyBubble.nohero && 
-        <>
-          {!isMobile && <img src={require(`./assets/images/web/LEGEND/SPEECH/Speech_bubbles_godville_${replyBubble.nohero}.webp`)} className="characterImage index11 index13" />}
-          <div className={`characterImage index11 index13 speechText replybubble${replyBubble.nohero}`} >{replySpeech.nohero}</div> 
-        </>
+          <div
+            className={`speechText speech-chip speech-chip--choice${stageFocus === 'choice' ? ' stage-focus' : ''}`}
+            style={speechChipStyle.reply || undefined}
+            onClick={() => setStageFocus('choice')}
+          >{replySpeech.nohero}</div>
         } 
       </>
       }
@@ -1295,94 +1519,231 @@ const Legends = ({setComponent}) => {
       {matchImage && <>
         <img 
           src={matchImage} 
-          className={`characterImage index12 ${loading || !randomResult ? 'fade-to-black' : ''}`} 
-          style={loading || !randomResult ? { opacity: 0.5, filter: 'brightness(20%) blur(2px)', transform: 'translateZ(30px) scale(0.9)' } : { opacity: 1 } }
+          className={`characterImage index12 ${loading ? 'fate-previous' : playOutcome === 'win' ? 'fate-match' : ''} ${stageFocus === 'match' ? 'stage-focus' : ''}`} 
+          alt={getFateLabel()}
+          onClick={() => setStageFocus('match')}
+          style={{ cursor: 'pointer', pointerEvents: 'auto' }}
         />
-        <div className="villainText">
-          {loading
-            ? "Hunting..."
-            : randomResult != null && playId != null
-              ? `FATE #${randomResult} vs #${playId}${Number(randomResult) === Number(playId) ? ' MATCH' : ''}`
-              : randomResult != null
-                ? `FATE #${randomResult}`
-                : !randomResult && choiceImage
-                  ? "YOUR LAST FATE"
-                  : "YOUR FATE"}
+        <div className={`villainText ${stageFocus === 'match' ? 'stage-focus-label' : ''}`}>
+          {getFateLabel()}
         </div>
       </>
       }
-      <div className="panel">          
-      {Object.entries(LegendaryChoices).map(([key, villain]) => (
-        <img
-          key={key}
-          src={villain}
-          alt={key}
-          className={`selectedImage ${loading ? 'notallowed' : ''}`}
-          onClick={() => selectChoice(key, villain)}  
-        />
-      ))}
-      </div>
-      <div className="tray">
-      <div className="dashboard" />
-        <div className="scoreboard"><>Balance: {walletBalance != null ? <span className="waveanimator quote goldtext"> {safeNum(walletBalance)}</span> : <span className="waveanimator quote goldtext">Loading... </span>} <span className='fontSmall'>ETH</span></>
-        {isMobile ? <br /> : <span> {(tokenBalance?.Mil || tokenBalance?.K || tokenBalance?.Data) && <RxDividerVertical />}</span>}
-        {tokenBalance?.Mil != null && tokenBalance.Mil > 0 && <><span className="waveanimator quote goldtext">  {safeNum(tokenBalance.Mil)} Mil</span> <span className='fontSmall'>CASHCAT</span> </>}
-        {tokenBalance?.K != null && tokenBalance.K > 0 && <><span className="waveanimator quote goldtext"> {safeNum(tokenBalance.K)} K</span> <span className='fontSmall'>CASHCAT</span> </>}
-        {tokenBalance?.Data != null && tokenBalance.Data > 0 && <><span className="waveanimator quote goldtext"> {safeNum(tokenBalance.Data)}</span> <span className='fontSmall'>CASHCAT</span> </>}
-      </div>
-        <div className="button-board">
-          <button
-            className='legend-button'
-            onClick={handlePlay}
-            disabled={playDisabled}
-            style={{ opacity: playDisabled ? 0.4 : 1, cursor: playDisabled ? 'not-allowed' : 'pointer' }}
-            title={
-              !dataReady
-                ? (dataLoading ? 'Loading game data…' : (dataError || 'Game data unavailable'))
-                : feePreview
-                  ? (feePreview.ccc > 0
-                      ? `Entry: ${safeNum(feePreview.eth)} ETH + ${safeNum(feePreview.ccc)} $CASHCAT${feePreview.hasNft ? ' (NFT rate)' : ' (full rate)'}`
-                      : `Entry: ${safeNum(feePreview.eth)} ETH${feePreview.hasNft ? ' (NFT rate)' : ' (full rate)'}`)
-                  : 'Play'
-            }
-          >
-            {dataLoading && !dataReady ? (
-              'Loading…'
-            ) : loading ? (
-              isApproving ? 'Approving...' : 'Rolling...'
-            ) : (
-              <>
-                <span>Play!</span>
-                {feePreview && (
-                  <span
-                    className="fontSmall"
-                    style={{
-                      display: 'block',
-                      fontSize: '0.65em',
-                      lineHeight: 1.2,
-                      marginTop: '0.15em',
-                      opacity: 0.92,
-                      fontWeight: 500,
-                    }}
-                  >
-                    {safeNum(feePreview.eth)} ETH
-                    {feePreview.ccc > 0 ? ` + ${safeNum(feePreview.ccc)} CCC` : ''}
+
+      {/* Bottom chrome: NFT dock + choice strip + tray — never under stage art */}
+      <div className="bottom-chrome">
+        <div className="nft-dock">
+          {(nft === null || dataLoading) && <div className="nftText">…</div>}
+          {nft > 0 && !dataLoading && (
+            <img
+              src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`}
+              alt={`NFT #${nft}`}
+              className="nftImage"
+              onClick={() => {
+                setNftFlipInfo(false);
+                setNFTDisplay(true);
+              }}
+            />
+          )}
+          {nft === 0 && !dataLoading && (
+            <img
+              src={require('./assets/images/nonftsfound.webp')}
+              alt="No NFT"
+              className="nftImage"
+              onClick={noPlayNFT}
+            />
+          )}
+        </div>
+        <div className="chrome-main">
+          <div className="panel">
+            {Object.entries(LegendaryChoices).map(([key, villain]) => (
+              <img
+                key={key}
+                src={villain}
+                alt={key}
+                className={`selectedImage ${loading ? 'notallowed' : ''}`}
+                onClick={() => selectChoice(key, villain)}
+              />
+            ))}
+          </div>
+          <div className="tray">
+            <div className="dashboard">
+              {dataReady && seasonPot != null && prizePot?.era != null && (
+                <div className="pot-chip" aria-label="Season pot">
+                  <span className="smaller">Season {prizePot.era} pot</span>
+                  <span className="pot-value">{safeNum(seasonPot)} ETH</span>
+                </div>
+              )}
+            </div>
+            <div className="scoreboard">
+              <span className="stat">
+                <span className="stat-label">ETH</span>
+                {walletBalance != null
+                  ? <span className="goldtext">{safeNum(walletBalance)}</span>
+                  : <span className="goldtext">…</span>}
+              </span>
+              {tokenBalance?.Mil != null && tokenBalance.Mil > 0 && (
+                <span className="stat">
+                  <span className="stat-label">CCC</span>
+                  <span className="goldtext">{safeNum(tokenBalance.Mil)}M</span>
+                </span>
+              )}
+              {tokenBalance?.K != null && tokenBalance.K > 0 && (
+                <span className="stat">
+                  <span className="stat-label">CCC</span>
+                  <span className="goldtext">{safeNum(tokenBalance.K)}K</span>
+                </span>
+              )}
+              {tokenBalance?.Data != null && tokenBalance.Data > 0 && !(tokenBalance?.Mil > 0) && !(tokenBalance?.K > 0) && (
+                <span className="stat">
+                  <span className="stat-label">CCC</span>
+                  <span className="goldtext">{safeNum(tokenBalance.Data)}</span>
+                </span>
+              )}
+            </div>
+            <div className="button-board">
+              <button
+                className="legend-button"
+                onClick={handlePlay}
+                disabled={playDisabled}
+                style={{ opacity: playDisabled ? 0.4 : 1, cursor: playDisabled ? 'not-allowed' : 'pointer' }}
+                title={
+                  !dataReady
+                    ? (dataLoading ? 'Loading game data…' : (dataError || 'Game data unavailable'))
+                    : feePreview
+                      ? (feePreview.ccc > 0
+                          ? `Requires ${safeNum(feePreview.eth)} ETH + ${safeNum(feePreview.ccc)} CCC${feePreview.hasNft ? ' (NFT rate)' : ''}`
+                          : `Requires ${safeNum(feePreview.eth)} ETH${feePreview.hasNft ? ' (NFT rate)' : ''}`)
+                      : 'Hunt!'
+                }
+              >
+                {dataLoading && !dataReady ? (
+                  'Loading…'
+                ) : loading ? (
+                  isApproving ? 'Approving...' : 'Hunting...'
+                ) : (
+                  <span className="hunt-swap" aria-live="polite">
+                    <span className={`hunt-swap__face ${showHuntReq && feePreview ? 'is-hidden' : 'is-shown'}`}>
+                      <span className="hunt-swap__title">Hunt!</span>
+                    </span>
+                    {feePreview && (
+                      <span className={`hunt-swap__face ${showHuntReq ? 'is-shown' : 'is-hidden'}`}>
+                        <span className="hunt-swap__req">
+                          Requires {safeNum(feePreview.eth)} ETH
+                          {feePreview.ccc > 0 ? ` + ${safeNum(feePreview.ccc)} CCC` : ''}
+                        </span>
+                      </span>
+                    )}
                   </span>
                 )}
-              </>
-            )}
-          </button>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       {account?.address && dataReady && <WalletParameter />}
       {blockchain.chainId === 57054 && <a className="mainlink" href="https://cashcats.fun"><div className="back-button">Go to Mainnet</div></a>}
-      {nftDisplay && 
-      <div className="centrify nftDisplay" align="center" onClick={closeDisplay} style={{cursor: 'pointer'}} >
-        <div className="nftTitle">Cashcat in use (<span style={{color: 'white'}}>edition #{nft}</span>) </div>
-        <img src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`} className="nftDisplayImage" /><br />
-        <a href="https://opensea.io/collection/0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132" target="_blank"><button className="trade-button" onClick={() => {closeDisplay(); playButton()}}>Trade on Paintswap</button></a>
+      {nftDisplay && (() => {
+        const facts = getNftFacts();
+        return (
+      <div className="centrify nftDisplay" onClick={closeDisplay} role="dialog" aria-label="Cashcat NFT">
+        <div
+          className="nftDisplay-panel"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="nftDisplay-toolbar">
+            <div className="nftTitle">
+              Cashcat in use (<span style={{ color: 'white' }}>edition #{nft}</span>)
+            </div>
+            <button
+              type="button"
+              className="nft-close-btn"
+              aria-label="Close NFT display"
+              title="Close"
+              onClick={closeDisplay}
+            >
+              ×
+            </button>
+          </div>
+
+          <div
+            className={`nft-flip${nftFlipInfo ? ' is-flipped' : ''}`}
+            onClick={() => setNftFlipInfo((v) => !v)}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setNftFlipInfo((v) => !v);
+              }
+            }}
+            title={nftFlipInfo ? 'Show NFT image' : 'Show NFT details'}
+          >
+            <div className="nft-flip-inner">
+              <div className="nft-flip-face nft-flip-front">
+                <img
+                  src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`}
+                  className="nftDisplayImage"
+                  alt={`Cashcat #${nft}`}
+                  draggable={false}
+                />
+                <span className="nft-flip-hint">Tap image for details</span>
+              </div>
+              <div className="nft-flip-face nft-flip-back">
+                <div className="nft-info">
+                  <div className="nft-info-block">
+                    <h3 className="nft-info-header">Name</h3>
+                    <p className="nft-info-value">{facts.name}</p>
+                  </div>
+                  <div className="nft-info-block">
+                    <h3 className="nft-info-header">Profit Index</h3>
+                    <p className="nft-info-value nft-info-value--accent">{facts.profitIndex}</p>
+                    <p className="nft-info-note">
+                      On-chain profit metric — higher means you keep more of your winnings and get a better play discount.
+                    </p>
+                  </div>
+                  <div className="nft-info-block">
+                    <h3 className="nft-info-header">Vicinity</h3>
+                    <p className="nft-info-value">{facts.vicinity}</p>
+                    <p className="nft-info-note">
+                      The beat this Cashcat occupies or practises in.
+                    </p>
+                  </div>
+                  {facts.edition != null && (
+                    <div className="nft-info-block nft-info-block--compact">
+                      <h3 className="nft-info-header">Edition</h3>
+                      <p className="nft-info-value">#{facts.edition}</p>
+                    </div>
+                  )}
+                  {!nftMeta && (
+                    <p className="nft-info-note" style={{ marginTop: '0.5rem' }}>
+                      Metadata still loading or unavailable for this edition.
+                    </p>
+                  )}
+                  <span className="nft-flip-hint">Tap to show image</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <a
+            href="https://opensea.io/collection/0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="trade-button"
+              onClick={() => { closeDisplay(); playButton(); }}
+            >
+              Trade on Opensea
+            </button>
+          </a>
+        </div>
       </div>
-      }
+        );
+      })()}
   
       <div className={visualEffect.dissolve1 ? 'dissolve-3d' : ''} style={{display: `${displayOff.hero}`}}>
         <div className={`literary-content-hero ${animations.literaryHero ? 'animate-in' : ''}`}>
@@ -1432,72 +1793,88 @@ const Legends = ({setComponent}) => {
         </div>
       )}
       </div>
-      {dataReady && seasonPot != null && prizePot?.era != null && (
-        <div className="balloons">
-          <span className="smaller">Season's {prizePot.era} Pot</span>
-          <br />
-          {safeNum(seasonPot)} ETH
-        </div>
-      )}
       {/* <Partner /> */}
       {dataReady &&
         prizePot?.era != null &&
         counter !== prizePot.era &&
         lastWinner?.pot != null &&
         lastWinner?.address && (
-        <div className='centrify prizewinner' onClick={saveEreCounter}>Hooray! A cashcat has found the light!
-        <span style={{color: "red", fontWeight: 'bold'}}>{truncateAddress(lastWinner.address)} </span>won the pot prize of <span style={{color: "red", fontWeight: 'bold'}}>{safeNum(lastWinner.pot)} ETH</span> on <span style={{color: "red", fontWeight: 'bold'}}> {lastWinner.timestamp || "—"}</span> 
-        Welcome to Season {prizePot.era}<br/>
-        The Prize Pot is now at <span style={{color: "lime", fontWeight: 'bold', fontSize: 'xx-large'}}>{safeNum(seasonPot)} ETH</span>. <br />
-        Will you be the next Cashcat to take this season's pot home? <br />
-        <MdToggleOn/>
+        <div className="prizewinner outcome-season" onClick={saveEreCounter} role="dialog" aria-label="New season">
+          <div className="outcome-card outcome-season" onClick={saveEreCounter}>
+            <span className="outcome-badge">New season</span>
+            <h2 className="outcome-title">A Cashcat found the light</h2>
+            <div className="outcome-body">
+              <div>
+                <strong>{truncateAddress(lastWinner.address)}</strong> took{' '}
+                <span className="outcome-hl">{safeNum(lastWinner.pot)} ETH</span>
+                {lastWinner.timestamp ? <> on {lastWinner.timestamp}</> : null}.
+              </div>
+              <div style={{ marginTop: '0.5rem' }}>
+                Welcome to Season <strong>{prizePot.era}</strong>. Pot is now{' '}
+                <span className="outcome-eth">{safeNum(seasonPot)} ETH</span>.
+              </div>
+              <div style={{ marginTop: '0.35rem' }}>Will you be next?</div>
+            </div>
+            <div className="outcome-hint">Tap to continue</div>
+          </div>
         </div>
        )}
        {/* Dual-draw match (firstDraw == secondDraw) — contract win condition */}
        {playOutcome === 'win' && (
-         <div className='centrify prizewinner' onClick={refreshState}>
-           <span className="waveanimator liberty goldtext">
-             {winAmount
-               ? "Congratulations! You've won this season's pot!"
-               : "Double match! You hit the jackpot roll!"}
-           </span>
-           <div style={{ marginTop: '0.5rem' }}>
-             Draws <span style={{ color: 'gold', fontWeight: 'bold' }}>#{randomResult}</span>
-             {' '}&amp;{' '}
-             <span style={{ color: 'gold', fontWeight: 'bold' }}>#{playId != null ? playId : randomResult}</span>
-             {' '}— matched!
+         <div className="prizewinner outcome-win" onClick={refreshState} role="dialog" aria-label="You won">
+           <div className="outcome-card outcome-win">
+             <span className="outcome-badge">Jackpot</span>
+             <h2 className="outcome-title">
+               {winAmount
+                 ? "You won the season pot!"
+                 : "Double match — jackpot roll!"}
+             </h2>
+             <div className="outcome-body">
+               <div>
+                 Draws <span className="outcome-hl">#{randomResult}</span>
+                 {' '}&amp;{' '}
+                 <span className="outcome-hl">#{playId != null ? playId : randomResult}</span>
+                 {' '}matched.
+               </div>
+               {winAmount != null && winAmount > 0 && (
+                 <div style={{ marginTop: '0.45rem' }}>
+                   Payout ~ <span className="outcome-eth">{safeNum(winAmount)} ETH</span>
+                   {' '}→ <strong>{truncateAddress(account?.address)}</strong>
+                 </div>
+               )}
+               {(!winAmount || winAmount <= 0) && (
+                 <div style={{ marginTop: '0.45rem' }}>
+                   Pot was empty this season — your fee seeded the next round.
+                 </div>
+               )}
+             </div>
+             <div className="outcome-hint">Tap to continue</div>
            </div>
-           {winAmount != null && winAmount > 0 && (
-             <div>
-               Payout ~ <span style={{ color: 'lime', fontWeight: 'bold' }}>{safeNum(winAmount)} ETH</span>
-               {' '}to <span style={{ color: 'red', fontWeight: 'bold' }}>{truncateAddress(account?.address)}</span>
-             </div>
-           )}
-           {(!winAmount || winAmount <= 0) && (
-             <div style={{ opacity: 0.9 }}>
-               Pot was empty this season — your fee still seeded the next round.
-             </div>
-           )}
-           <br />
-           <MdToggleOn style={{ color: 'whitesmoke' }} />
          </div>
        )}
        {playOutcome === 'lose' && randomResult != null && (
-         <div className='centrify prizewinner' onClick={() => setPlayOutcome(null)} style={{ cursor: 'pointer' }}>
-           <span className="waveanimator forest goldtext">No match this round</span>
-           <div>
-             Draws <span style={{ color: 'gold', fontWeight: 'bold' }}>#{randomResult}</span>
-             {playId != null && (
-               <>
-                 {' '}&amp;{' '}
-                 <span style={{ color: 'gold', fontWeight: 'bold' }}>#{playId}</span>
-               </>
-             )}
-             {' '}— need both numbers equal to win the pot.
+         <div className="prizewinner outcome-lose" onClick={() => setPlayOutcome(null)} role="dialog" aria-label="No match">
+           <div className="outcome-card outcome-lose">
+             <span className="outcome-badge">No match</span>
+             <h2 className="outcome-title">Close, but no cigar</h2>
+             <div className="outcome-body">
+               <div>
+                 Draws <span className="outcome-hl">#{randomResult}</span>
+                 {playId != null && (
+                   <>
+                     {' '}&amp;{' '}
+                     <span className="outcome-hl">#{playId}</span>
+                   </>
+                 )}
+                 {' '}— both numbers must match to win.
+               </div>
+               <div style={{ marginTop: '0.45rem' }}>
+                 Your ETH fee joined the season pot. Hunt again!
+               </div>
+             </div>
+             <BsEmojiDizzyFill style={{ color: 'var(--lg-gold)', marginTop: '0.15rem', fontSize: '1.35rem' }} />
+             <div className="outcome-hint">Tap to continue</div>
            </div>
-           <div style={{ opacity: 0.9 }}>Your ETH fee was added to the season pot. Try again!</div>
-           <BsEmojiDizzyFill style={{ color: 'gold', marginTop: '0.5rem' }} />
-           <MdToggleOn style={{ color: 'whitesmoke' }} />
          </div>
        )}
     </div>
