@@ -862,41 +862,43 @@ const Mint = ({ setComponent }) => {
                   </span>
                 </div>
               </div>
-              <div className="rewardsText"> You are eligible to mint </div>
-              {condition ? (
-                <div className="countText">{eligibleMints.total}</div>
-              ) : (
-                <div className="countText">0</div>
-              )}
-              <div className="rewardsTextSmall">CASHCATS NFTs</div>
-              {condition ? (
-                <div className="rewardsTextSmall pink">All Whitelisted mints are free.</div>
-              ) : (
-                <div className="rewardsTextSmall sunfire">{feeLine}.</div>
-              )}
-              <div className="mintpanel">
-                {countDown <= 0 ? (
-                  <button
-                    className="mint-button"
-                    onClick={handleMint}
-                    disabled={loading}
-                    style={loading ? { opacity: 0.5, cursor: 'not-allowed' } : { cursor: 'pointer' }}
-                  >
-                    <span className="smaller">{condition ? 'free' : 'paid'}</span>
-                    {buttonLabel()}
-                  </button>
+              <div className="mint-status">
+                <div className="rewardsText">You are eligible to mint</div>
+                {condition ? (
+                  <div className="countText">{eligibleMints.total}</div>
                 ) : (
-                  <button
-                    className="mint-button"
-                    onClick={() => {
-                      setComponent('home');
-                      disconnect(wallet);
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    Logout
-                  </button>
+                  <div className="countText">0</div>
                 )}
+                <div className="rewardsTextSmall">CASHCATS NFTs</div>
+                {condition ? (
+                  <div className="rewardsTextSmall pink">All whitelisted mints are free.</div>
+                ) : (
+                  <div className="rewardsTextSmall sunfire">{feeLine}.</div>
+                )}
+                <div className="mintpanel">
+                  {countDown <= 0 ? (
+                    <button
+                      className="mint-button"
+                      onClick={handleMint}
+                      disabled={loading}
+                      style={loading ? { opacity: 0.5, cursor: 'not-allowed' } : { cursor: 'pointer' }}
+                    >
+                      <span className="smaller">{condition ? 'free' : 'paid'}</span>
+                      {buttonLabel()}
+                    </button>
+                  ) : (
+                    <button
+                      className="mint-button"
+                      onClick={() => {
+                        setComponent('home');
+                        disconnect(wallet);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      Logout
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </Desktop>
@@ -1004,9 +1006,9 @@ const Mint = ({ setComponent }) => {
       ) : (
         <>
           <div className="mintTitle" align="center">
-            <span style={{ fontFamily: 'NexaHeavy', color: 'skyblue' }}>CyberZero says...</span>
-            {countDown > 0 ? 'Mint Not yet live!' : 'Mint is live!'}
-            <div style={{ padding: '1vh' }}>
+            <span style={{ fontFamily: 'NexaHeavy', color: '#7ec8ff' }}>Cashcats</span>
+            {countDown > 0 ? 'Mint not yet live' : 'Mint is live'}
+            <div style={{ padding: '0.5rem' }}>
               <Connector />
             </div>
           </div>
