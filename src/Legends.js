@@ -1986,7 +1986,7 @@ const Legends = ({setComponent}) => {
                     <h3 className="nft-info-header">Vicinity</h3>
                     <p className="nft-info-value">{facts.vicinity}</p>
                     <p className="nft-info-note">
-                      The beat this Cashcat occupies or practises in.
+                      The beat this Cash Cat occupies or practises in.
                     </p>
                   </div>
                   {facts.edition != null && (
