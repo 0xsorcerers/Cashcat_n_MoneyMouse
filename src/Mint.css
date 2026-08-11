@@ -240,6 +240,13 @@ width: 10vh;
   justify-content: space-between;
   margin: 0.5vh 0vw 0.5vh 0vw;
 }
+/* Error / cancel toasts */
+.notifyText.cancelled {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(198, 7, 7, 0.9));
+  box-shadow: 4px 4px 8px 4px rgba(243, 105, 108, 0.9);
+  border: 2px solid maroon;
+  color: #1a1a1a;
+}
 .myNotifyText {
   font-size: small;
   vertical-align: middle;

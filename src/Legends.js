@@ -22,7 +22,7 @@ import Partner from './partner';
 const toBigInt = (v) => {
   try {
     if (v === null || v === undefined || v === "") return 0n;
-    return globalThis.BigInt(typeof v === "object" && v.toString ? v.toString() : v);
+    return BigInt(typeof v === "object" && v.toString ? v.toString() : v);
   } catch {
     return 0n;
   }
@@ -321,7 +321,7 @@ const Legends = ({setComponent}) => {
   const fetchHero = async() => {
     try {  
       if (nft > 0 ) {
-        const response = await fetch(`https://penny4thots.my/ipfsCache/${nft}.json`, {
+        const response = await fetch(`https://daemon.penny4thots.my/ipfsCache/${nft}.json`, {
           method: "GET",
         });
     
@@ -334,7 +334,7 @@ const Legends = ({setComponent}) => {
 
         // Find the HERO trait
         const heroTrait = heroData.attributes.find(
-          attr => attr.trait_type === "Cashcat"
+          attr => attr.trait_type === "Cashcats"
         );
         
         if (heroTrait) {
@@ -1129,33 +1129,34 @@ const Legends = ({setComponent}) => {
   },[choiceImage]);
 
   useEffect(() => {
-    const getSpeeches = async() => {
+    const getSpeeches = async () => {
       try {
-        const response = await fetch("https://penny4thots.my/ipfsCache/robot_quips.json", {
-          method: "GET",
+        // Local themed banter: Cats (bounty hunters / NFT) vs Mice (rich prey / no-NFT)
+        const response = await fetch(`${process.env.REACT_PUBLIC_NFT_CACHE || ''}/quips.json`, {
+          method: 'GET',
         });
-    
+
         if (!response.ok) {
-          console.log("Failed to obtain Speech Bubbles");
+          console.log('Failed to obtain Speech Bubbles');
           return;
         }
-    
+
         const allSpeech = await response.json();
 
         setSpeeches({
-          nftSpeech: allSpeech.robot_quips,
-          nftReplySpeech: allSpeech.response_robot_quips,
-          noNftSpeech: allSpeech.incognito_quips,
-          noNftReplySpeech: allSpeech.response_incognito_quips
+          nftSpeech: allSpeech.cat_quips,
+          nftReplySpeech: allSpeech.response_cat_quips,
+          noNftSpeech: allSpeech.mouse_quips,
+          noNftReplySpeech: allSpeech.response_mouse_quips,
         });
       } catch (err) {
-        // CORS / offline: speech bubbles are non-critical
-        console.warn("Speech bubbles unavailable:", err?.message || err);
+        // Offline / missing file: speech bubbles are non-critical
+        console.warn('Speech bubbles unavailable:', err?.message || err);
       }
-    }    
+    };
 
     getSpeeches();
-  },[]);
+  }, []);
 
   // Last winner is included in getGameData(); only backfill if cache is missing fields
   useEffect(() => {
@@ -1244,7 +1245,7 @@ const Legends = ({setComponent}) => {
 
       <div className="nft">
         {(nft === null || dataLoading) && <div className="nftText">...loading</div>} 
-        {nft > 0 && !dataLoading && <img src={`https://penny4thots.my/ipfsCache/${nft}.webp`} alt="NFT" className="nftImage" onClick={() => setNFTDisplay(true)} />}
+        {nft > 0 && !dataLoading && <img src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`} alt="NFT" className="nftImage" onClick={() => setNFTDisplay(true)} />}
         {nft === 0 && !dataLoading && <img src={require('./assets/images/nonftsfound.webp')} alt="NFT" className="nftImage" onClick={noPlayNFT} />}
       </div>
       {heroImage && 
@@ -1299,7 +1300,7 @@ const Legends = ({setComponent}) => {
         />
         <div className="villainText">
           {loading
-            ? "Rolling on-chain..."
+            ? "Hunting..."
             : randomResult != null && playId != null
               ? `FATE #${randomResult} vs #${playId}${Number(randomResult) === Number(playId) ? ' MATCH' : ''}`
               : randomResult != null
@@ -1378,8 +1379,8 @@ const Legends = ({setComponent}) => {
       {nftDisplay && 
       <div className="centrify nftDisplay" align="center" onClick={closeDisplay} style={{cursor: 'pointer'}} >
         <div className="nftTitle">Cashcat in use (<span style={{color: 'white'}}>edition #{nft}</span>) </div>
-        <img src={`https://penny4thots.my/ipfsCache/${nft}.webp`} className="nftDisplayImage" /><br />
-        <a href="https://opensea.io/collection/cashcats-on-base" target="_blank"><button className="trade-button" onClick={() => {closeDisplay(); playButton()}}>Trade on Paintswap</button></a>
+        <img src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`} className="nftDisplayImage" /><br />
+        <a href="https://opensea.io/collection/0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132" target="_blank"><button className="trade-button" onClick={() => {closeDisplay(); playButton()}}>Trade on Paintswap</button></a>
       </div>
       }
   

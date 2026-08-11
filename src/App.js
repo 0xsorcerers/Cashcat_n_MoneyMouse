@@ -194,7 +194,7 @@ function App () {
             <div className={`nav-link ${account ? '' : 'opacity2'}`}  onClick={handleStart}>
               PLAY
             </div> : <div className="nav-link" onClick={() => setComponent('mint')}>
-              MINT
+              Spawn
             </div>
             }
             
@@ -210,9 +210,9 @@ function App () {
         {/* <a className="nav-link" href="https://" target="_blank" rel="noopener noreferrer">Buy $CASHCATS</a> */}
         {component !== 'legends' ? 
             <div className={`nav-link ${account ? '' : 'opacity2'}`} onClick={handleStart}>
-              PLAY NOW
+              PLAY
             </div> : <div className="nav-link" onClick={() => setComponent('mint')}>
-              MINT
+              SPAWN
             </div>
         }
         {/* {component === 'home' && (

@@ -26,7 +26,6 @@ import wrong from "../assets/sounds/effects/wrong.mp3";
 import metadata from "../assets/docs/metadata_search_query.json";
 
 import logo from "../assets/images/logo.webp";
-import logobase from "../assets/images/baselogo.webp"
 import air1 from "../assets/images/air1-image.webp";
 import air2 from "../assets/images/air2-image.webp";
 import air3 from "../assets/images/air3-image.webp";
@@ -162,39 +161,38 @@ import WoolMobile from '../assets/images/mobile/ARTIFACT/Wool.webp'
 import noHeroFound from "../assets/images/noherofound.webp";
 
 /* legendary heroes */
-import Acatus from '../assets/images/web/LEGEND/Heroes/Acatus.webp';
-import Atalanta from '../assets/images/web/LEGEND/Heroes/Atalanta.webp';
-import Calais from '../assets/images/web/LEGEND/Heroes/Calais.webp';
-import Castor from '../assets/images/web/LEGEND/Heroes/Castor.webp';
-import GeneralPeleus from '../assets/images/web/LEGEND/Heroes/GeneralPeleus.webp';
-import Heracles from '../assets/images/web/LEGEND/Heroes/Heracles.webp';
-import Idmon from '../assets/images/web/LEGEND/Heroes/Idmon.webp';
-import Cashcat from '../assets/images/web/LEGEND/Heroes/Cashcat.webp';
-import Lynceus from '../assets/images/web/LEGEND/Heroes/Lynceus.webp';
-import Pollox from '../assets/images/web/LEGEND/Heroes/Pollox.webp';
-import Talos from '../assets/images/web/LEGEND/Heroes/Talos.webp';
-import Telamon from '../assets/images/web/LEGEND/Heroes/Telamon.webp';
-import Zetes from '../assets/images/web/LEGEND/Heroes/Zetes.webp';
+import Bette from '../assets/images/web/LEGEND/Heroes/Bette.webp';
+import Curl from '../assets/images/web/LEGEND/Heroes/Curl.webp';
+import Devon from '../assets/images/web/LEGEND/Heroes/Devon.webp';
+import Gerald from '../assets/images/web/LEGEND/Heroes/Gerald.webp';
+import Kahl from '../assets/images/web/LEGEND/Heroes/Kahl.webp';
+import Loki from '../assets/images/web/LEGEND/Heroes/Loki.webp';
+import Maine from '../assets/images/web/LEGEND/Heroes/Maine.webp';
+import Makki from '../assets/images/web/LEGEND/Heroes/Makki.webp';
+import Mau from '../assets/images/web/LEGEND/Heroes/Mau.webp';
+import Munch from '../assets/images/web/LEGEND/Heroes/Munch.webp';
+import Persia from '../assets/images/web/LEGEND/Heroes/Persia.webp';
+import Scot from '../assets/images/web/LEGEND/Heroes/Scot.webp';
+import Siam from '../assets/images/web/LEGEND/Heroes/Siam.webp';
 
 /* Legendary Choices */
-import JamesBond from '../assets/images/web/LEGEND/Choices/JamesBond.webp';
-import Cruella from '../assets/images/web/LEGEND/Choices/Cruella.webp';
-import DarthVader from '../assets/images/web/LEGEND/Choices/DarthVader.webp';
-import Deadpool from '../assets/images/web/LEGEND/Choices/Deadpool.webp';
-import Gollum from '../assets/images/web/LEGEND/Choices/Gollum.webp';
-import HarleyQuinn from '../assets/images/web/LEGEND/Choices/HarleyQuinn.webp';
-import HarryPotter from '../assets/images/web/LEGEND/Choices/HarryPotter.webp';
-import IronMan from '../assets/images/web/LEGEND/Choices/IronMan.webp';
-import JackSparrow from '../assets/images/web/LEGEND/Choices/JackSparrow.webp';
-import TheJoker from '../assets/images/web/LEGEND/Choices/TheJoker.webp';
-import LaraCroft from '../assets/images/web/LEGEND/Choices/LaraCroft.webp';
-import VampireLestat from '../assets/images/web/LEGEND/Choices/VampireLestat.webp';
-import Neo from '../assets/images/web/LEGEND/Choices/Neo.webp';
-import Pennywise from '../assets/images/web/LEGEND/Choices/Pennywise.webp';
-import Sabrina from '../assets/images/web/LEGEND/Choices/Sabrina.webp';
-import Superman from '../assets/images/web/LEGEND/Choices/Superman.webp';
-import TheGodfather from '../assets/images/web/LEGEND/Choices/TheGodfather.webp';
-import V from '../assets/images/web/LEGEND/Choices/V.webp';
+import LongGunGary from '../assets/images/web/LEGEND/Choices/LongGunGary.webp';
+import BazooMacho from '../assets/images/web/LEGEND/Choices/BazooMacho.webp';
+import BossLugo from '../assets/images/web/LEGEND/Choices/BossLugo.webp';
+import CJ from '../assets/images/web/LEGEND/Choices/CJ.webp';
+import CornyNorma from '../assets/images/web/LEGEND/Choices/CornyNorma.webp';
+import DevilMonty from '../assets/images/web/LEGEND/Choices/DevilMonty.webp';
+import FreddyWild from '../assets/images/web/LEGEND/Choices/FreddyWild.webp';
+import GROM from '../assets/images/web/LEGEND/Choices/GROM.webp';
+import MadameFlo from '../assets/images/web/LEGEND/Choices/MadameFlo.webp';
+import ManicMary from '../assets/images/web/LEGEND/Choices/ManicMary.webp';
+import McBrad from '../assets/images/web/LEGEND/Choices/McBrad.webp';
+import NoNameSally from '../assets/images/web/LEGEND/Choices/NoNameSally.webp';
+import OneLineSheila from '../assets/images/web/LEGEND/Choices/OneLineSheila.webp';
+import RockyLaw from '../assets/images/web/LEGEND/Choices/RockyLaw.webp';
+import SassyLassie from '../assets/images/web/LEGEND/Choices/SassyLassie.webp';
+import SoberTaka from '../assets/images/web/LEGEND/Choices/SoberTaka.webp';
+import SunnySide from '../assets/images/web/LEGEND/Choices/SunnySide.webp';
 
 import sos_audit from '../assets/images/audits/SOS_AUDIT.webp';
 import tos_audit from '../assets/images/audits/TOS_AUDIT.webp';
@@ -221,7 +219,6 @@ const visualEffects = {
   air4,
   air5,
   air6,
-  logobase
 }
 
 const auditArray = [sos_audit,tos_audit,los_audit]
@@ -616,40 +613,39 @@ const literaryData = {
 };
 
 const LegendaryHeroes = {
-  Acatus,
-  Atalanta,
-  Calais,
-  Castor,
-  GeneralPeleus,
-  Heracles,
-  Idmon,
-  Cashcat,
-  Lynceus,
-  Pollox,
-  Talos,
-  Telamon,
-  Zetes
+  Bette,
+  Curl,
+  Devon,
+  Gerald,
+  Kahl,
+  Loki,
+  Maine,
+  Makki,
+  Mau,
+  Munch,
+  Persia,
+  Scot,
+  Siam
 }
 
 const LegendaryChoices = {
-  Cruella,
-  DarthVader,
-  Deadpool,
-  Gollum,
-  HarleyQuinn,
-  HarryPotter,
-  IronMan,
-  JackSparrow,
-  JamesBond,
-  TheJoker,
-  LaraCroft,
-  Neo,
-  Pennywise,
-  Sabrina,
-  Superman,
-  TheGodfather,
-  V,
-  VampireLestat
+  BazooMacho,
+  BossLugo,
+  CJ,
+  CornyNorma,
+  DevilMonty,
+  FreddyWild,
+  GROM,
+  MadameFlo,
+  ManicMary,
+  McBrad,
+  NoNameSally,
+  LongGunGary,
+  OneLineSheila,
+  RockyLaw,
+  SassyLassie,
+  SoberTaka,
+  SunnySide
 }
 
 export { backgroundMusic, soundEffects, visualEffects, documents, 

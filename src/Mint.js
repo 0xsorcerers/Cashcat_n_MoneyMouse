@@ -7,6 +7,7 @@ import {
   client,
   Connector,
   contract,
+  provider,
   base,
   blockchain,
   thirdwebContract,
@@ -14,7 +15,7 @@ import {
   cashcatContract,
   formatNumber,
 } from './tools/utils';
-import { prepareContractCall } from 'thirdweb';
+import { prepareContractCall, waitForReceipt, prepareEvent, parseEventLogs } from 'thirdweb';
 import {
   useActiveAccount,
   useActiveWallet,
@@ -22,8 +23,22 @@ import {
   useSendTransaction,
   useWalletBalance,
 } from 'thirdweb/react';
-import { MdToggleOn, MdCancel } from 'react-icons/md';
+import { MdToggleOn, MdCancel, MdCheckCircle, MdInfo } from 'react-icons/md';
 import { ethers } from 'ethers';
+
+/** Cashcats NFT mint event (indexed tokenId) */
+const proofOfCashcatMintEvent = prepareEvent({
+  signature: 'event proofOfCashcat(uint256 indexed tokenId)',
+});
+
+const IPFS_CACHE = 'https://daemon.penny4thots.my/ipfsCache';
+const localAlpha = () => {
+  try {
+    return require('./assets/images/alpha.webp');
+  } catch {
+    return '/logo512.webp';
+  }
+};
 
 // Media Screen Resolution
 const Desktop = ({ children }) => {
@@ -92,11 +107,15 @@ const Mint = ({ setComponent }) => {
     air3: null, air2: null, air1: null, air5: null, air4: null, air6: null,
   });
   const [loading, setLoading] = useState(false);
-  const [mintLog, setMintLog] = useState();
+  /** Latest global mint feed item { tokenId, timestamp } */
+  const [mintLog, setMintLog] = useState(null);
+  /** Token id minted by this wallet (personal receipt toast) */
   const [mintLogged, setMintLogged] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [errorMessageVisible, setErrorMessageVisible] = useState(false);
-  const [hideNotifications, setHideNotifications] = useState(true);
+  const [infoMessage, setInfoMessage] = useState('');
+  const [infoMessageVisible, setInfoMessageVisible] = useState(false);
+  const [infoTone, setInfoTone] = useState('info'); // 'info' | 'success'
   /** Free whitelist path available for this wallet */
   const [condition, setCondition] = useState(false);
   const [accountBal, setAccountBal] = useState(null);
@@ -117,13 +136,20 @@ const Mint = ({ setComponent }) => {
   const [isApproving, setIsApproving] = useState(false);
   const [isMinting, setIsMinting] = useState(false);
   const [dataReady, setDataReady] = useState(false);
+  /** Fallback art when daemon cache image 404s */
+  const [thumbBroken, setThumbBroken] = useState({});
 
   const mintingRef = useRef(false);
+  const seenMintIds = useRef(new Set());
+  const dismissTimers = useRef([]);
+  const accountRef = useRef(null);
 
   const account = useActiveAccount();
   const wallet = useActiveWallet();
   const { disconnect } = useDisconnect();
   const { mutateAsync: sendTransactionAsync } = useSendTransaction();
+
+  accountRef.current = account?.address || null;
 
   const { data: walletBalData } = useWalletBalance({
     chain: base,
@@ -357,10 +383,185 @@ const Mint = ({ setComponent }) => {
     }
   }, [account?.address, fetchMintData, refreshAll]);
 
+  const clearDismissTimers = () => {
+    dismissTimers.current.forEach((t) => clearTimeout(t));
+    dismissTimers.current = [];
+  };
+
+  const scheduleDismiss = (fn, ms = 8000) => {
+    const t = setTimeout(fn, ms);
+    dismissTimers.current.push(t);
+    return t;
+  };
+
   const showError = (msg) => {
     setErrorMessage(msg);
     setErrorMessageVisible(true);
+    setInfoMessageVisible(false);
+    scheduleDismiss(() => setErrorMessageVisible(false), 10000);
   };
+
+  const showInfo = (msg, tone = 'info') => {
+    setInfoTone(tone);
+    setInfoMessage(msg);
+    setInfoMessageVisible(true);
+    scheduleDismiss(() => setInfoMessageVisible(false), 7000);
+  };
+
+  /**
+   * Mark a minted token in the feed; if wallet owns it, show personal receipt toast.
+   * HTTP JsonRpcProvider does not deliver contract.on subscriptions reliably — prefer receipts + polling.
+   */
+  const registerMintedToken = useCallback(async (tokenId, { forcePersonal = false } = {}) => {
+    const id = tokenId?.toString?.() ?? String(tokenId);
+    if (!id || id === 'undefined' || id === 'null') return;
+
+    const isNew = !seenMintIds.current.has(id);
+    seenMintIds.current.add(id);
+
+    if (isNew || forcePersonal) {
+      setMintLog({ tokenId: id, timestamp: Date.now() });
+      scheduleDismiss(() => {
+        setMintLog((cur) => (cur?.tokenId === id ? null : cur));
+      }, 12000);
+    }
+
+    const addr = accountRef.current;
+    if (!addr && !forcePersonal) return;
+
+    try {
+      const ownerData = await contract.ownerOf(id);
+      if (addr && ownerData && ownerData.toLowerCase() === addr.toLowerCase()) {
+        setMintLogged(id);
+        setThumbBroken((prev) => ({ ...prev, [id]: false }));
+        showInfo(`CASHCATS #${id} minted to your wallet!`, 'success');
+      }
+    } catch (e) {
+      // ownerOf can lag a block; still surface global feed
+      console.warn('registerMintedToken ownerOf failed:', e?.shortMessage || e?.message);
+      if (forcePersonal) {
+        setMintLogged(id);
+        showInfo(`CASHCATS #${id} mint confirmed!`, 'success');
+      }
+    }
+  }, []);
+
+  /**
+   * Parse proofOfCashcat from a confirmed mint tx (primary receipt path).
+   * When supply % 10 == 0 the contract also mints a DAO reserve token — pick the one you own.
+   */
+  const processMintReceipt = useCallback(async (txResult) => {
+    try {
+      const transactionHash =
+        typeof txResult === 'string'
+          ? txResult
+          : txResult?.transactionHash || txResult?.hash;
+
+      if (!transactionHash) {
+        console.error('Mint tx result missing hash', txResult);
+        showError('Mint submitted but no transaction hash was returned.');
+        return null;
+      }
+
+      showInfo('Mint transaction confirmed — reading receipt…', 'info');
+
+      const receipt = await waitForReceipt({
+        client,
+        chain: base,
+        transactionHash,
+      });
+
+      if (receipt.status === 'reverted' || receipt.status === 0 || receipt.status === '0') {
+        showError('Mint transaction reverted on-chain.');
+        return null;
+      }
+
+      const tokenIds = [];
+
+      try {
+        const events = parseEventLogs({
+          logs: receipt.logs || [],
+          events: [proofOfCashcatMintEvent],
+        });
+        for (const ev of events) {
+          const tid = ev.args?.tokenId ?? ev.args?.[0];
+          if (tid != null) tokenIds.push(tid.toString());
+        }
+      } catch (parseErr) {
+        console.warn('parseEventLogs failed, trying ethers Interface:', parseErr);
+      }
+
+      // Fallback: decode with ethers ABI (covers ABI/shape mismatches)
+      if (!tokenIds.length && receipt.logs?.length) {
+        const iface = new ethers.Interface(contract.interface.fragments);
+        for (const log of receipt.logs) {
+          try {
+            const parsed = iface.parseLog({ topics: log.topics, data: log.data });
+            if (parsed?.name === 'proofOfCashcat') {
+              tokenIds.push(parsed.args[0].toString());
+            }
+          } catch {
+            // not our event
+          }
+        }
+      }
+
+      // Transfer(from=0) as last resort
+      if (!tokenIds.length && receipt.logs?.length) {
+        const iface = new ethers.Interface([
+          'event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)',
+        ]);
+        for (const log of receipt.logs) {
+          try {
+            const parsed = iface.parseLog({ topics: log.topics, data: log.data });
+            if (
+              parsed?.name === 'Transfer' &&
+              parsed.args.from === ethers.ZeroAddress
+            ) {
+              tokenIds.push(parsed.args.tokenId.toString());
+            }
+          } catch {
+            // skip
+          }
+        }
+      }
+
+      if (!tokenIds.length) {
+        console.error('No mint events in receipt', receipt);
+        showError('Mint confirmed but no token id found in the receipt. Refresh and check your wallet.');
+        return null;
+      }
+
+      // Register all (DAO reserve + user). Personal toast only for owned ids.
+      let personalId = null;
+      const addr = accountRef.current?.toLowerCase();
+      for (const id of tokenIds) {
+        await registerMintedToken(id, { forcePersonal: false });
+        if (addr) {
+          try {
+            const owner = (await contract.ownerOf(id))?.toLowerCase?.();
+            if (owner === addr) personalId = id;
+          } catch {
+            // if only one id and we minted, treat as personal
+            if (tokenIds.length === 1) personalId = id;
+          }
+        }
+      }
+
+      // If ownerOf lagged, still credit last id as personal when we initiated mint
+      if (!personalId && tokenIds.length) {
+        personalId = tokenIds[tokenIds.length - 1];
+        setMintLogged(personalId);
+        showInfo(`CASHCATS #${personalId} minted!`, 'success');
+      }
+
+      return personalId;
+    } catch (err) {
+      console.error('processMintReceipt failed:', err);
+      showError(err?.shortMessage || err?.message || 'Failed to read mint receipt.');
+      return null;
+    }
+  }, [registerMintedToken]);
 
   const handleMint = async () => {
     if (loading || mintingRef.current) return;
@@ -372,40 +573,43 @@ const Mint = ({ setComponent }) => {
     mintingRef.current = true;
     setLoading(true);
     setErrorMessageVisible(false);
+    clearDismissTimers();
 
     try {
       const md = await fetchMintData(account.address);
       if (!md) {
-        showError('Could not load mint data.');
+        showError('Could not load mint data. Check your connection and try again.');
         return;
       }
 
       if (md.isPaused) {
-        showError('Mint is paused.');
+        showError('Mint is paused by the DAO. Try again later.');
         return;
       }
       if (!md.mintLive) {
-        showError('Mint is not live yet.');
+        showError('Mint is not live yet. Check back when the countdown ends.');
         return;
       }
 
       // —— Free whitelist path ——
       if (md.canFreeMint) {
         setIsMinting(true);
+        showInfo('Submitting free whitelist mint…', 'info');
         const tx = prepareContractCall({
           contract: thirdwebContract,
           method: 'function mint() payable',
           params: [],
           value: 0n,
         });
-        await sendTransactionAsync(tx);
+        const result = await sendTransactionAsync(tx);
+        await processMintReceipt(result);
         await refreshAll();
         return;
       }
 
       // —— Paid path: exact native fee + optional ERC20 tokenFee ——
       if (!md.publicPhaseLive) {
-        showError('Public mint phase has not started yet.');
+        showError('Public mint phase has not started yet. Whitelist-only window is still open.');
         return;
       }
 
@@ -422,7 +626,8 @@ const Mint = ({ setComponent }) => {
           `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needEth)))} ETH` +
           (needTok > 0n
             ? ` + ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}.`
-            : '.')
+            : '.') +
+          ' Top up ETH and try again.'
         );
         return;
       }
@@ -435,7 +640,8 @@ const Mint = ({ setComponent }) => {
             `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}` +
             (needEth > 0n
               ? ` + ${formatNumber(Number(safeFormatEther(needEth)))} ETH.`
-              : '.')
+              : '.') +
+            ` Your balance is too low.`
           );
           return;
         }
@@ -448,7 +654,10 @@ const Mint = ({ setComponent }) => {
 
         if (allowance < needTok) {
           setIsApproving(true);
-          // Approve at least the token fee (wei) for the NFT contract
+          showInfo(
+            `Approve ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol} for the mint contract…`,
+            'info'
+          );
           const approveTx = prepareContractCall({
             contract: thirdwebCASHCATContract,
             method: 'function approve(address spender, uint256 value)',
@@ -456,10 +665,17 @@ const Mint = ({ setComponent }) => {
           });
           await sendTransactionAsync(approveTx);
           setIsApproving(false);
+          showInfo(`${blockchain.symbol} approved. Submitting mint…`, 'success');
         }
       }
 
       setIsMinting(true);
+      showInfo(
+        needEth > 0n
+          ? `Submitting paid mint (${formatNumber(Number(safeFormatEther(needEth)))} ETH)…`
+          : 'Submitting paid mint…',
+        'info'
+      );
       // Contract requires msg.value == fee exactly on paid path
       const mintTx = prepareContractCall({
         contract: thirdwebContract,
@@ -467,7 +683,8 @@ const Mint = ({ setComponent }) => {
         params: [],
         value: needEth,
       });
-      await sendTransactionAsync(mintTx);
+      const result = await sendTransactionAsync(mintTx);
+      await processMintReceipt(result);
       await refreshAll();
     } catch (err) {
       console.error('handleMint failed:', err);
@@ -480,38 +697,43 @@ const Mint = ({ setComponent }) => {
     }
   };
 
-  const addressMatch = async (_tokenId) => {
-    try {
-      const ownerData = await contract.ownerOf(_tokenId);
-      if (account?.address && account.address.toLowerCase() === ownerData.toLowerCase()) {
-        setMintLogged(_tokenId);
-        if (hideNotifications === false) {
-          setHideNotifications(true);
-          setTimeout(() => setHideNotifications(false), 6000);
-        }
-      }
-    } catch (e) {
-      console.error('addressMatch failed:', e);
-    }
-  };
-
+  /**
+   * Poll recent proofOfCashcat logs (works with HTTP RPC).
+   * contract.on() needs a websocket / filter subscription most public RPCs do not provide.
+   */
   useEffect(() => {
     if (!contract) return undefined;
-    const onProof = (tokenId) => {
-      const id = tokenId?.toString?.() ?? String(tokenId);
-      setMintLog({ tokenId: id, timestamp: Date.now() });
-      if (account?.address) addressMatch(tokenId);
-      // Keep board in sync after any on-chain mint
-      if (account?.address) refreshAll();
-    };
-    contract.on('proofOfCashcat', onProof);
-    return () => {
+    let cancelled = false;
+
+    const pollMints = async () => {
       try {
-        contract.off('proofOfCashcat', onProof);
-      } catch (_) { /* ignore */ }
+        const latest = await provider.getBlockNumber();
+        const fromBlock = Math.max(0, latest - 12);
+        const logs = await contract.queryFilter(
+          contract.filters.proofOfCashcat(),
+          fromBlock,
+          latest
+        );
+        if (cancelled || !logs?.length) return;
+        for (const log of logs) {
+          const id = (log.args?.[0] ?? log.args?.tokenId)?.toString?.();
+          if (id) await registerMintedToken(id);
+        }
+      } catch (e) {
+        // Silent — public RPC may rate-limit; receipt path still handles own mints
+        console.warn('mint poll failed:', e?.shortMessage || e?.message);
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [account?.address, refreshAll]);
+
+    pollMints();
+    const interval = setInterval(pollMints, 15000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [registerMintedToken]);
+
+  useEffect(() => () => clearDismissTimers(), []);
 
   // Create the target date in a way that works across all browsers
   const targetDate = new Date();
@@ -816,45 +1038,93 @@ const Mint = ({ setComponent }) => {
         </>
       )}
 
-      <div className="notifications" style={{ display: hideNotifications ? 'block' : 'none' }}>
-        {mintLog && (
-          <div className="notify notifyText">
-            <img
-              className="notifyImg wheat"
-              src={require('./assets/images/alpha.webp')}
-              alt="Mint"
-            />
-            CASHCATS <span style={{ color: 'lime' }}>#{mintLog.tokenId}</span> just minted
-            <MdToggleOn
-              onClick={() => setHideNotifications(!hideNotifications)}
-              style={{ cursor: 'pointer', margin: '0vh 1vh' }}
-            />
+      {(() => {
+        const hasToasts =
+          errorMessageVisible ||
+          infoMessageVisible ||
+          !!mintLog ||
+          !!mintLogged;
+        if (!hasToasts) return null;
+
+        const remoteThumb = mintLogged
+          ? `${IPFS_CACHE}/${mintLogged}.webp`
+          : null;
+        const thumbSrc =
+          mintLogged && !thumbBroken[mintLogged] && remoteThumb
+            ? remoteThumb
+            : localAlpha();
+
+        return (
+          <div className="notifications" style={{ display: 'block' }}>
+            {errorMessageVisible && (
+              <div className="notify notifyText cancelled">
+                <MdCancel style={{ color: 'salmon', marginRight: '0.5vh' }} />
+                {errorMessage}
+                <MdToggleOn
+                  onClick={() => setErrorMessageVisible(false)}
+                  style={{ cursor: 'pointer', margin: '0vh 1vh' }}
+                  title="Dismiss"
+                />
+              </div>
+            )}
+            {infoMessageVisible && (
+              <div
+                className={`notify notifyText ${infoTone === 'success' ? '' : 'cancelled'}`}
+                style={
+                  infoTone === 'success'
+                    ? { borderColor: 'lime' }
+                    : { borderColor: 'skyblue' }
+                }
+              >
+                {infoTone === 'success' ? (
+                  <MdCheckCircle style={{ color: 'lime', marginRight: '0.5vh' }} />
+                ) : (
+                  <MdInfo style={{ color: 'skyblue', marginRight: '0.5vh' }} />
+                )}
+                {infoMessage}
+                <MdToggleOn
+                  onClick={() => setInfoMessageVisible(false)}
+                  style={{ cursor: 'pointer', margin: '0vh 1vh' }}
+                  title="Dismiss"
+                />
+              </div>
+            )}
+            {mintLog && (
+              <div className="notify notifyText">
+                <img
+                  className="notifyImg wheat"
+                  src={localAlpha()}
+                  alt="Mint"
+                />
+                CASHCATS <span style={{ color: 'lime' }}>#{mintLog.tokenId}</span> just minted
+                <MdToggleOn
+                  onClick={() => setMintLog(null)}
+                  style={{ cursor: 'pointer', margin: '0vh 1vh' }}
+                  title="Dismiss"
+                />
+              </div>
+            )}
+            {mintLogged && (
+              <div className="myNotify myNotifyText">
+                <img
+                  className="myNotifyImg pink"
+                  src={thumbSrc}
+                  alt={`Cashcat #${mintLogged}`}
+                  onError={() =>
+                    setThumbBroken((prev) => ({ ...prev, [mintLogged]: true }))
+                  }
+                />
+                CASHCATS <span style={{ color: 'maroon' }}>#{mintLogged}</span> minted by you!
+                <MdToggleOn
+                  onClick={() => setMintLogged(null)}
+                  style={{ cursor: 'pointer', margin: '0vh 1vh' }}
+                  title="Dismiss"
+                />
+              </div>
+            )}
           </div>
-        )}
-        {mintLogged && (
-          <div className="myNotify myNotifyText">
-            <img
-              className="myNotifyImg pink"
-              src={`https://penny4thots.my/ipfsCache/${mintLogged}.webp`}
-              alt="Mint"
-            />
-            CASHCATS <span style={{ color: 'maroon' }}>#{mintLogged}</span> minted by you!
-            <MdToggleOn
-              onClick={() => setMintLogged(null)}
-              style={{ cursor: 'pointer', margin: '0vh 1vh' }}
-            />
-          </div>
-        )}
-        {errorMessageVisible && (
-          <div className="notify notifyText">
-            <MdCancel /> {errorMessage}
-            <MdToggleOn
-              onClick={() => setErrorMessageVisible(false)}
-              style={{ cursor: 'pointer', margin: '0vh 1vh' }}
-            />
-          </div>
-        )}
-      </div>
+        );
+      })()}
     </div>
   );
 };

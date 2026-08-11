@@ -15,7 +15,7 @@ import Pyth from '@pythnetwork/pyth-sdk-solidity/abis/IPyth.json';
 //Thirdweb wallet connect
 // Global Constants ***************************************************************************************************************
 export const client = createThirdwebClient({
-  clientId: '1a5b6cbe48f52555cc067d65e1842742',
+  clientId: `${process.env.REACT_CLIENT_ID}`,
 });
 
 export const wallets = [
