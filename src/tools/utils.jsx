@@ -14,13 +14,21 @@ import Pyth from '@pythnetwork/pyth-sdk-solidity/abis/IPyth.json';
 
 //Thirdweb wallet connect
 // Global Constants ***************************************************************************************************************
+// Prefer REACT_APP_* (CRA-injected). Fallback matches index.js ThirdwebProvider.
 export const client = createThirdwebClient({
-  clientId: `${process.env.REACT_CLIENT_ID}`,
+  clientId: '1a5b6cbe48f52555cc067d65e1842742',
+  config: {
+    rpc: {
+      // Cashcat RPC HTTP-403s blocked methods (eth_maxPriorityFeePerGas, etc.).
+      // Batching those with normal calls makes the entire batch fail with 403.
+      maxBatchSize: 1,
+    },
+  },
 });
 
 export const wallets = [
-  // createWallet("com.coinbase.wallet"),
-  // walletConnect(),
+  createWallet("com.coinbase.wallet"),
+  walletConnect(),
   // createWallet("io.metamask"),
   inAppWallet({
     auth: {
@@ -41,36 +49,68 @@ export const wallets = [
 ];
 
 export const blockchain = {
-  // // mainnet (Base) — fill with mainnet deploys when ready
-  // name: 'Cashcat',
-  // symbol: 'CASHCAT',
-  // address: '0x...',
-  // chainId: 8453,
-  // rpc: 'https://mainnet.base.org',
-  // blockExplorer: 'https://basescan.org/',
-  // cashcat_contract_address: "0x...",
-  // decimals: 18,
-  // pyth_contract_address: "0x8250f4aF4B972684F7b336503E2D6dFeDeB1487a",
-  // legend_contract_address: "0x...",
-  // base_price_id: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
-
-  // testnet — Ethereum Sepolia (contracts are deployed here)
-  // NOTE: chainId MUST match the RPC's eth_chainId. Do not point chainId 11155111
-  // at rpc.cashcatchain.cash (that endpoint is chain 2274228 and has no code at these addresses).
+  // // mainnet (cashcat Chain) 
   name: 'Cashcat',
-  symbol: 'CASHCAT',
-  address: '0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132', // CASHCATS NFT
-  chainId: 11155111, // Ethereum Sepolia
-  rpc: 'https://ethereum-sepolia-rpc.publicnode.com',
-  blockExplorer: 'https://sepolia.etherscan.io/',
-  cashcat_contract_address: "0x8bb94d9345EB47e8b5f4555c7724124043D0931a", // ERC20
+  /** ERC20 token symbol (platform fee / mint token fee). */
+  symbol: 'CCC',
+  /**
+   * Native gas / pot / entry-fee ticker for this deployment.
+   * Swap per network (ETH on Sepolia/Base, S on Sonic, etc.) so UI never hardcodes it.
+   */
+  nativeSymbol: 'CASHCAT',
+  address: '0x64f90C1F258768a35f7661e293AA7e2976DC567b', // CASHCATS NFT
+  chainId: 2274228, // Cashcat Network
+  rpc: 'https://rpc.cashcatchain.cash',
+  blockExplorer: 'https://explorer.cashcatchain.cash/',
+  cashcat_contract_address: "0xf8Bdba72dC5b87DDF25625d0D5632635d5c4ED07", // ERC20
   decimals: 18,
   pyth_contract_address: "0xDd24F84d36BF92C65F92307595335bdFab5Bbd21", // Pyth on Sepolia (legacy; game no longer needs entropy fee)
-  legend_contract_address: "0x785ad69b277c7c5668e4D0FbFC195f7987F6A2Ee", // CashCat_n_MoneyMouse
-  base_price_id: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+  legend_contract_address: "0xDfd36FF913da6a32D7E77d6573185060ccc4F9BD", // CashCat_n_MoneyMouse
+  // base_price_id: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+
+  // // testnet — Ethereum Sepolia (contracts are deployed here)
+  // name: 'Cashcat',
+  // /** ERC20 token symbol (platform fee / mint token fee). */
+  // symbol: 'CNY',
+  // /**
+  //  * Native gas / pot / entry-fee ticker for this deployment.
+  //  * Swap per network (ETH on Sepolia/Base, S on Sonic, etc.) so UI never hardcodes it.
+  //  */
+  // nativeSymbol: 'ETH',
+  // address: '0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132', // CASHCATS NFT
+  // chainId: 11155111, // Ethereum Sepolia
+  // rpc: 'https://ethereum-sepolia-rpc.publicnode.com',
+  // blockExplorer: 'https://sepolia.etherscan.io/',
+  // cashcat_contract_address: "0x8bb94d9345EB47e8b5f4555c7724124043D0931a", // ERC20
+  // decimals: 18,
+  // pyth_contract_address: "0xDd24F84d36BF92C65F92307595335bdFab5Bbd21", // Pyth on Sepolia (legacy; game no longer needs entropy fee)
+  // legend_contract_address: "0x785ad69b277c7c5668e4D0FbFC195f7987F6A2Ee", // CashCat_n_MoneyMouse
+  // // base_price_id: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
 };
 
-export const base = defineChain({ id: blockchain.chainId, rpc: blockchain.rpc});
+/**
+ * Full chain metadata for Cashcat mainnet.
+ *
+ * feeType: "legacy" is required — the public RPC blocks eth_maxPriorityFeePerGas
+ * with HTTP 403 ("Underly policy"), which thirdweb surfaces as
+ * "RPC request failed with status 403" during approve/play gas estimation.
+ * Legacy mode uses eth_gasPrice only (allowed on this RPC).
+ */
+export const base = defineChain({
+  id: blockchain.chainId,
+  name: blockchain.name,
+  rpc: blockchain.rpc,
+  nativeCurrency: {
+    name: blockchain.nativeSymbol,
+    symbol: blockchain.nativeSymbol,
+    decimals: 18,
+  },
+  blockExplorers: blockchain.blockExplorer
+    ? [{ name: `${blockchain.name} Explorer`, url: blockchain.blockExplorer }]
+    : undefined,
+  // @ts-expect-error thirdweb reads chain.feeType in getDefaultGasOverrides
+  feeType: "legacy",
+});
 // Pin network so ethers does not auto-detect a mismatched chain from a bad RPC
 export const provider = new JsonRpcProvider(blockchain.rpc, blockchain.chainId, { staticNetwork: true });
 
@@ -181,9 +221,9 @@ export function Connector () {
           titleIcon:
             "/logo512.webp",
           welcomeScreen: {
-            title: "Cashcats 'n' MoneyMouse!",
+            title: "Cashcats 'n' MoneyMice!",
             subtitle:
-              "...unleashing kickass GambleFi and Yield on Base.",
+              "...unleashing kickass GambleFi and Yield on Cashcat Chain.",
             img: {
               src: '/logo512.webp',
               width: 250,

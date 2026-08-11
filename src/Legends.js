@@ -27,6 +27,67 @@ const toBigInt = (v) => {
   }
 };
 
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Wait for a wallet tx to be mined (not merely submitted). */
+const waitForTxMined = async (txResult, label = "Transaction") => {
+  const transactionHash =
+    typeof txResult === "string"
+      ? txResult
+      : txResult?.transactionHash || txResult?.hash;
+  if (!transactionHash) {
+    throw new Error(`${label}: no transaction hash returned from wallet.`);
+  }
+  const receipt = await waitForReceipt({
+    client,
+    chain: base,
+    transactionHash,
+  });
+  const bad =
+    receipt?.status === "reverted" ||
+    receipt?.status === 0 ||
+    receipt?.status === "0" ||
+    receipt?.status === false;
+  if (bad) {
+    throw new Error(`${label} reverted on-chain.`);
+  }
+  return { receipt, transactionHash };
+};
+
+/**
+ * Poll ERC20 allowance until >= needed (or timeout).
+ * Guards against RPC lag right after an approve receipt lands.
+ */
+const waitForAllowance = async (
+  owner,
+  spender,
+  needed,
+  { attempts = 24, delayMs = 750 } = {}
+) => {
+  let last = 0n;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      last = toBigInt(await cashcatContract.allowance(owner, spender));
+      if (last >= needed) return last;
+    } catch (e) {
+      console.warn("allowance poll failed:", e?.message || e);
+    }
+    await sleep(delayMs);
+  }
+  return last;
+};
+
+/** Pretty-print camelCase legend keys for outcome copy (BazooMacho → Bazoo Macho). */
+const formatLegendName = (key) => {
+  if (key == null || key === "") return null;
+  const s = String(key).trim();
+  if (!s) return null;
+  return s
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .trim();
+};
+
 /** Comic-style speech chip tints (bg + border + soft glow) */
 const SPEECH_TINTS = [
   { bg: "linear-gradient(165deg, rgba(255,252,245,0.98), rgba(255,236,190,0.96))", border: "rgba(200,140,40,0.45)", glow: "rgba(245,197,66,0.25)" },
@@ -143,7 +204,12 @@ const Legends = ({setComponent}) => {
   const [walletBalance, setWalletBalance] = useState(null);
   const [tokenBalance, setTokenBalance] = useState({Wei: null, Mil: null, K: null, Data: null});
   const [nft, setNFT] = useState(null);
-  const { mutate: sendTransaction, data: transactionResult, error: txError } = useSendTransaction();
+  const {
+    mutate: sendTransaction,
+    mutateAsync: sendTransactionAsync,
+    data: transactionResult,
+    error: txError,
+  } = useSendTransaction();
   const [heroImage, setHeroImage] = useState(null);
   const [names, setNames] = useState({hero: null, villain: null});
   const [choiceImage, setChoiceImage] = useState(null);
@@ -159,6 +225,10 @@ const Legends = ({setComponent}) => {
   const [didWin, setDidWin] = useState(false);
   const [winAmount, setWinAmount] = useState(null);
   const [playOutcome, setPlayOutcome] = useState(null); // 'win' | 'lose' | null
+  /** Themed hunt labels for outcome popup (no draw numbers). */
+  const [outcomeHunt, setOutcomeHunt] = useState({ bounty: null, hunted: null });
+  /** Season index after a pot win (chain advances era immediately on payout). */
+  const [seasonAfterWin, setSeasonAfterWin] = useState(null);
   const [animations, setAnimations] = useState({
     literaryHero: false,
     literaryVillain: false,
@@ -174,7 +244,14 @@ const Legends = ({setComponent}) => {
   // eth = native pot (wei formatted as ether string number); era = season index
   const [prizePot, setPrizePot] = useState({eth: null, era: null});
   const [seasonPot, setSeasonPot] = useState(null);
-  const [lastWinner, setLastWinner] = useState({address: null, pot: null, timestamp: null})
+  const [lastWinner, setLastWinner] = useState({
+    address: null, pot: null, timestamp: null, era: null,
+  });
+  /** Seasons hall of fame (pastwinners board). */
+  const [showSeasonBoard, setShowSeasonBoard] = useState(false);
+  const [seasonBoard, setSeasonBoard] = useState([]); // { era, winner, amount, timestamp }[]
+  const [seasonBoardLoading, setSeasonBoardLoading] = useState(false);
+  const [seasonBoardError, setSeasonBoardError] = useState(null);
   const [recentCost, setRecentCost] = useState(null);
   /** Cached one-shot read from getGameData() — pot, fees, odds, last winner, etc. */
   const [gameData, setGameData] = useState(null);
@@ -205,13 +282,25 @@ const Legends = ({setComponent}) => {
   const lastMatchRevealKey = useRef(null);
 
   function seasonSelector () {
-    const cachedCounter = localStorage.getItem('seasonCounter');
-    if (cachedCounter !== null && !isNaN(parseInt(cachedCounter))) {
-      return parseInt(cachedCounter);
-    }    
+    try {
+      const cachedCounter = localStorage.getItem('seasonCounter');
+      if (cachedCounter !== null && !isNaN(parseInt(cachedCounter, 10))) {
+        return parseInt(cachedCounter, 10);
+      }
+    } catch (_) { /* private mode / blocked storage */ }
     return 1;
   }
   const [counter, setCounter] = useState(seasonSelector());
+
+  /** Persist the player's last-seen season so returning users get a new-season notice. */
+  const cacheSeasonEra = (era) => {
+    if (era == null || Number.isNaN(Number(era))) return;
+    const n = Number(era);
+    setCounter(n);
+    try {
+      localStorage.setItem('seasonCounter', String(n));
+    } catch (_) { /* ignore */ }
+  };
 
   const quickBanter = () => {
     if (!choiceImage) return;
@@ -255,7 +344,7 @@ const Legends = ({setComponent}) => {
   
   const balanceVerificationCheck = () => {
     if (walletBalance == null || Number(walletBalance) <= 0) {
-      setErrorMessage("You need ETH to pay the entry fee");
+      setErrorMessage(`You need ${blockchain.nativeSymbol} to pay the entry fee`);
       setErrorMessageVisible(true);
       noPlayFunds();
       setLoading(false);
@@ -323,6 +412,7 @@ const Legends = ({setComponent}) => {
    * - Win (firstDraw === secondDraw): Matches art for the locked-in choice key.
    * - Lose: a different Matches portrait (not the selected choice).
    * Choice center image stays LegendaryChoices and is never written here.
+   * Also records bounty/hunted names for themed outcome copy (no draw numbers in UI).
    */
   const revealMatchFromResult = (firstDraw, secondDraw, choiceKey) => {
     const a = Number(firstDraw);
@@ -336,9 +426,11 @@ const Legends = ({setComponent}) => {
 
     const isWin =
       !Number.isNaN(a) && !Number.isNaN(b) && a === b;
+    const bountyKey = choiceKey || names.villain || null;
 
     if (isWin && choiceKey && LegendaryMatches[choiceKey]) {
       setMatchImage(LegendaryMatches[choiceKey]);
+      setOutcomeHunt({ bounty: bountyKey, hunted: choiceKey });
       setStageFocus('match');
       return;
     }
@@ -347,7 +439,9 @@ const Legends = ({setComponent}) => {
     const others = matchEntries.filter(([k]) => k !== choiceKey);
     const pool = others.length > 0 ? others : matchEntries;
     const idx = randomShuffle(Math.max(pool.length - 1, 0));
-    setMatchImage(pool[idx][1]);
+    const [huntedKey, huntedImg] = pool[idx];
+    setMatchImage(huntedImg);
+    setOutcomeHunt({ bounty: bountyKey, hunted: huntedKey });
     setStageFocus('match');
   };
 
@@ -599,6 +693,7 @@ const Legends = ({setComponent}) => {
           timestamp: data.lastWinTimestamp
             ? new Date(data.lastWinTimestamp * 1000).toLocaleString()
             : "—",
+          era: data.lastWinEra || Math.max(1, data.currentEra - 1),
         });
       }
 
@@ -768,6 +863,8 @@ const Legends = ({setComponent}) => {
     setWinAmount(null);
     setPlayOutcome(null);
     setMatchImage(null);
+    setOutcomeHunt({ bounty: null, hunted: null });
+    setSeasonAfterWin(null);
     pendingPlaySeed.current = null;
     choiceKeyAtPlayRef.current = null;
     lastMatchRevealKey.current = null;
@@ -787,13 +884,22 @@ const Legends = ({setComponent}) => {
     setPlayId(b);
     if (nonce != null) setSequenceNumber(nonce.toString());
 
-    setDidWin(Boolean(potWon) || isMatch);
-    setPlayOutcome(isMatch || potWon ? 'win' : 'lose');
+    const won = Boolean(potWon) || isMatch;
+    setDidWin(won);
+    setPlayOutcome(won ? 'win' : 'lose');
     if (amountWon != null) {
-      const won = Number(safeFormatEther(amountWon));
-      setWinAmount(Number.isFinite(won) ? won : 0);
+      const amt = Number(safeFormatEther(amountWon));
+      setWinAmount(Number.isFinite(amt) ? amt : 0);
     } else {
       setWinAmount(null);
+    }
+
+    // Chain increments era on pot win — next season is live immediately
+    if (won) {
+      const eraNow = prizePot?.era ?? gameData?.currentEra ?? null;
+      setSeasonAfterWin(eraNow != null ? Number(eraNow) + 1 : null);
+    } else {
+      setSeasonAfterWin(null);
     }
 
     // Match portrait updates HERE only — never when reselecting a choice
@@ -803,9 +909,19 @@ const Legends = ({setComponent}) => {
     isWalletParameter = false;
     setLoading(false);
 
-    // Refresh pot / balances after the play fee (and possible payout)
+    // Refresh pot / era / balances after the play fee (and possible payout).
+    // On a win the contract already advanced era + paid the wallet — pull fresh state.
     setTimeout(() => {
       fetchCashcatBalance();
+      fetchGameData(account?.address || ethers.ZeroAddress, nft > 0 ? nft : 0)
+        .then((data) => {
+          if (won && data?.currentEra != null) {
+            setSeasonAfterWin(data.currentEra);
+            // Keep local era cache aligned so the win doesn't also trigger a "new season" banner about yourself
+            cacheSeasonEra(data.currentEra);
+          }
+        })
+        .catch(() => {});
       isWalletParameter = false;
     }, 1500);
   };
@@ -1006,15 +1122,109 @@ const Legends = ({setComponent}) => {
 
 
   const saveEreCounter = () => {
-    const era = prizePot?.era;
-    if (era == null) return;
-    setCounter(era);
-    localStorage.setItem('seasonCounter', String(era));
-    console.log("eraset: ", era);
-  }
+    cacheSeasonEra(prizePot?.era);
+  };
 
   /**
-   * Play entrypoint: native ETH entry fee (pot) + $CASHCAT tokenFee, dual RNG via sendToCashcat.
+   * Load past season winners from legends contract.pastwinners(era).
+   * Completed seasons are 1 .. currentEra-1 (era increments on each pot win).
+   */
+  const loadSeasonBoard = async () => {
+    setSeasonBoardLoading(true);
+    setSeasonBoardError(null);
+    try {
+      let current =
+        prizePot?.era != null
+          ? Number(prizePot.era)
+          : gameData?.currentEra != null
+            ? Number(gameData.currentEra)
+            : null;
+      if (current == null || !Number.isFinite(current)) {
+        try {
+          current = Number(await legendaryContract.era());
+        } catch (_) {
+          current = null;
+        }
+      }
+      if (current == null || !Number.isFinite(current) || current < 2) {
+        setSeasonBoard([]);
+        setSeasonBoardLoading(false);
+        return;
+      }
+
+      const eras = [];
+      for (let e = current - 1; e >= 1; e--) eras.push(e);
+
+      // Cap remote calls for very long-running deployments
+      const slice = eras.slice(0, 48);
+      const rows = await Promise.all(
+        slice.map(async (e) => {
+          try {
+            const w = await legendaryContract.pastwinners(e);
+            const winner = (w?.winner ?? w?.[0])?.toString?.() || ethers.ZeroAddress;
+            const eraNum = Number(w?.era ?? w?.[1] ?? e) || e;
+            const amountWei = w?.amount ?? w?.[2] ?? 0n;
+            const ts = Number(w?.timestamp ?? w?.[3] ?? 0) || 0;
+            if (!winner || winner === ethers.ZeroAddress) return null;
+            const amt = Number(safeFormatEther(amountWei));
+            return {
+              era: eraNum,
+              winner,
+              amount: Number.isFinite(amt) ? amt : 0,
+              timestamp: ts ? new Date(ts * 1000).toLocaleString() : "—",
+            };
+          } catch (_) {
+            return null;
+          }
+        })
+      );
+
+      setSeasonBoard(rows.filter(Boolean));
+    } catch (err) {
+      console.error("loadSeasonBoard failed:", err);
+      setSeasonBoardError(
+        err?.shortMessage || err?.message || "Could not load season winners"
+      );
+      setSeasonBoard([]);
+    } finally {
+      setSeasonBoardLoading(false);
+    }
+  };
+
+  const openSeasonBoard = (e) => {
+    if (e) {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+    }
+    setShowSeasonBoard(true);
+    loadSeasonBoard();
+  };
+
+  const closeSeasonBoard = (e) => {
+    if (e) {
+      e.preventDefault?.();
+      e.stopPropagation?.();
+    }
+    setShowSeasonBoard(false);
+  };
+
+  /** Dismiss personal win: cache the (already-advanced) season and reset play UI. */
+  const dismissWinAndContinue = () => {
+    // After a pot win the chain has already incremented era; prefer live pot era.
+    const nextEra =
+      prizePot?.era != null
+        ? prizePot.era
+        : gameData?.currentEra != null
+          ? gameData.currentEra
+          : null;
+    if (nextEra != null) cacheSeasonEra(nextEra);
+    refreshState();
+    // Refresh pot / era after payout settles
+    fetchGameData(account?.address || ethers.ZeroAddress, nft > 0 ? nft : 0).catch(() => {});
+  };
+
+  /**
+   * Play entrypoint: native entry fee (pot) + token fee, dual RNG via sendToCashcat.
    * Result is resolved from the confirmed tx receipt (firstDraw == secondDraw to win).
    */
   const sendToCashcat = async () => {
@@ -1030,6 +1240,7 @@ const Legends = ({setComponent}) => {
     setPlayOutcome(null);
     setDidWin(false);
     setWinAmount(null);
+    setOutcomeHunt({ bounty: null, hunted: null });
     // Lock the choice used for THIS hunt (tray can still change visuals for next hunt only)
     choiceKeyAtPlayRef.current = names.villain;
     lastMatchRevealKey.current = null;
@@ -1082,7 +1293,7 @@ const Legends = ({setComponent}) => {
 
       // Native entry fee check
       if (walletBalance != null && Number(walletBalance) < ethCostEth) {
-        setErrorMessage(`Requires ${formatNumber(ethCostEth)} ETH entry fee`);
+        setErrorMessage(`Requires ${formatNumber(ethCostEth)} ${blockchain.nativeSymbol} entry fee`);
         setErrorMessageVisible(true);
         noPlayFunds();
         setLoading(false);
@@ -1098,7 +1309,7 @@ const Legends = ({setComponent}) => {
 
         if (playerTok < tokenCostWei) {
           setErrorMessage(
-            `Requires ${formatNumber(tokenCostEth)} $CASHCAT token fee` +
+            `Requires ${formatNumber(tokenCostEth)} ${blockchain.symbol} token fee` +
             (nftParam > 0 ? "" : " (non-NFT rate)")
           );
           setErrorMessageVisible(true);
@@ -1108,27 +1319,50 @@ const Legends = ({setComponent}) => {
           return;
         }
 
-        const approvalAllowance = toBigInt(
-          await cashcatContract.allowance(
-            account.address,
-            blockchain.legend_contract_address
-          )
+        // Spender must be the game contract (pulls token fee via transferFrom)
+        const spender = blockchain.legend_contract_address;
+        let approvalAllowance = toBigInt(
+          await cashcatContract.allowance(account.address, spender)
         );
 
         if (approvalAllowance < tokenCostWei) {
-          console.log("Initiating $CASHCAT approval...");
+          console.log(`Initiating $${blockchain.symbol} approval...`);
           setIsApproving(true);
-          setErrorMessage("Requesting $CASHCAT Approval...");
+          setErrorMessage(`Requesting $${blockchain.symbol} Approval...`);
           setErrorMessageVisible(true);
 
+          // Approve enough for this hunt (not full wallet) — clear intent for wallets
+          const approveAmount = tokenCostWei;
           const approveTransaction = prepareContractCall({
             contract: thirdwebCASHCATContract,
             method: "function approve(address spender, uint256 value)",
-            params: [blockchain.legend_contract_address, playerTok],
+            params: [spender, approveAmount],
           });
 
-          sendTransaction(approveTransaction);
-          return;
+          // 1) Submit approve  2) wait for mine  3) poll allowance
+          // Blind 2.5s retries were flaky on mainnet RPCs after the network cutover.
+          const approveResult = await sendTransactionAsync(approveTransaction);
+          setErrorMessage(`Waiting for $${blockchain.symbol} approval to confirm…`);
+          setErrorMessageVisible(true);
+          await waitForTxMined(approveResult, "Approve");
+          approvalAllowance = await waitForAllowance(
+            account.address,
+            spender,
+            tokenCostWei
+          );
+          setIsApproving(false);
+
+          if (approvalAllowance < tokenCostWei) {
+            setErrorMessage(
+              `Approval confirmed but allowance is still too low. Wait a few seconds and tap Hunt again.`
+            );
+            setErrorMessageVisible(true);
+            setLoading(false);
+            pendingPlaySeed.current = null;
+            return;
+          }
+          setErrorMessage(`$${blockchain.symbol} approved! Hunting…`);
+          setErrorMessageVisible(true);
         }
       }
 
@@ -1147,6 +1381,7 @@ const Legends = ({setComponent}) => {
       console.log("Play transaction submitted (awaiting on-chain RNG)...");
     } catch (error) {
       console.error("Error in sendToCashcat:", error);
+      setIsApproving(false);
       setErrorMessage(formatPlayError(error));
       setErrorMessageVisible(true);
       setLoading(false);
@@ -1164,6 +1399,9 @@ const Legends = ({setComponent}) => {
       error?.message ||
       ""
     );
+    if (/user rejected|user denied|rejected the request|denied transaction/i.test(raw)) {
+      return "Approval or play was cancelled in the wallet.";
+    }
     // OZ ERC721NonexistentToken(uint256) selector — token id not minted
     if (raw.includes("0x7e273289") || /ERC721NonexistentToken/i.test(raw)) {
       return "That Cashcat NFT does not exist yet. Play without an NFT, or mint one first.";
@@ -1175,13 +1413,16 @@ const Legends = ({setComponent}) => {
       return "Game is paused. Try again later.";
     }
     if (/Insufficient fee/i.test(raw)) {
-      return "Not enough ETH sent for the entry fee.";
+      return `Not enough ${blockchain.nativeSymbol} sent for the entry fee.`;
     }
     if (/SafeERC20FailedOperation|ERC20Insufficient|transfer amount exceeds|insufficient allowance/i.test(raw)) {
-      return "Not enough $CASHCAT (or allowance) for the token fee.";
+      return `Not enough $${blockchain.symbol} (or allowance) for the token fee. Approve again, then Hunt.`;
     }
     if (/insufficient funds|exceeds the balance/i.test(raw)) {
-      return "Not enough ETH in your wallet for gas + entry fee.";
+      return `Not enough ${blockchain.nativeSymbol} in your wallet for gas + entry fee.`;
+    }
+    if (/chain|network|switch/i.test(raw) && /2274228|cashcat/i.test(raw + String(blockchain.chainId))) {
+      return `Wallet is on the wrong network. Switch to ${blockchain.name} (chain ${blockchain.chainId}).`;
     }
     // Prefer short viem message when present
     if (error?.shortMessage && !/Encoded error signature/i.test(error.shortMessage)) {
@@ -1203,17 +1444,8 @@ const Legends = ({setComponent}) => {
       });
     }
 
-    if (loading && isApproving && transactionResult) {
-      if (isWalletRead) return;
-      isWalletRead = true;
-      setIsApproving(false);
-      setErrorMessage("Approved! Playing...");
-      setErrorMessageVisible(true);
-      setTimeout(() => {
-        sendToCashcat();
-        isWalletRead = false;
-      }, 2500);
-    }
+    // Approve is awaited inline in sendToCashcat (waitForReceipt + allowance poll).
+    // Only the play tx still uses the mutate → transactionResult path.
 
     if (loading && !isApproving && txError) {
       if (isWalletRead) return;
@@ -1224,14 +1456,6 @@ const Legends = ({setComponent}) => {
       isWalletParameter = false;
       pendingPlaySeed.current = null;
       isWalletRead = false;
-    }
-
-    if (loading && isApproving && txError) {
-      setIsApproving(false);
-      setLoading(false);
-      setErrorMessage("Approval cancelled");
-      setErrorMessageVisible(true);
-      pendingPlaySeed.current = null;
     }
   }, [transactionResult, txError]);
 
@@ -1354,26 +1578,58 @@ const Legends = ({setComponent}) => {
     getSpeeches();
   }, []);
 
-  // Last winner is included in getGameData(); only backfill if cache is missing fields
+  // Last winner is included in getGameData(); backfill / refresh when era cache is stale
   useEffect(() => {
     if (
-      dataReady &&
-      prizePot?.era != null &&
-      counter !== prizePot.era &&
-      gameData?.lastWinner &&
-      gameData.lastWinner !== ethers.ZeroAddress &&
-      (lastWinner?.pot == null)
-    ) {
-      const pot = Number(safeFormatEther(gameData.lastWinAmount));
-      setLastWinner({
-        address: gameData.lastWinner,
-        pot: Number.isFinite(pot) ? pot : 0,
-        timestamp: gameData.lastWinTimestamp
-          ? new Date(gameData.lastWinTimestamp * 1000).toLocaleString()
-          : "—",
-      });
-    }
-  }, [prizePot?.era, gameData, counter, lastWinner?.pot, dataReady]);
+      !dataReady ||
+      prizePot?.era == null ||
+      counter === prizePot.era
+    ) return;
+
+    const hydrateFromGameData = () => {
+      if (
+        gameData?.lastWinner &&
+        gameData.lastWinner !== ethers.ZeroAddress
+      ) {
+        const pot = Number(safeFormatEther(gameData.lastWinAmount));
+        setLastWinner({
+          address: gameData.lastWinner,
+          pot: Number.isFinite(pot) ? pot : 0,
+          timestamp: gameData.lastWinTimestamp
+            ? new Date(gameData.lastWinTimestamp * 1000).toLocaleString()
+            : "—",
+          era: gameData.lastWinEra || Math.max(1, Number(prizePot.era) - 1),
+        });
+        return true;
+      }
+      return false;
+    };
+
+    if (hydrateFromGameData()) return;
+
+    // Fallback: read pastwinners(prevEra) directly when getGameData lacked a winner row
+    let cancelled = false;
+    const prevEra = Math.max(1, Number(prizePot.era) - 1);
+    (async () => {
+      try {
+        const w = await legendaryContract.pastwinners(prevEra);
+        if (cancelled) return;
+        const winner = (w?.winner ?? w?.[0])?.toString?.() || ethers.ZeroAddress;
+        if (!winner || winner === ethers.ZeroAddress) return;
+        const pot = Number(safeFormatEther(w?.amount ?? w?.[2] ?? 0n));
+        const ts = Number(w?.timestamp ?? w?.[3] ?? 0) || 0;
+        setLastWinner({
+          address: winner,
+          pot: Number.isFinite(pot) ? pot : 0,
+          timestamp: ts ? new Date(ts * 1000).toLocaleString() : "—",
+          era: Number(w?.era ?? w?.[1] ?? prevEra) || prevEra,
+        });
+      } catch (err) {
+        console.warn("pastwinners fallback failed:", err?.message || err);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [prizePot?.era, gameData, counter, dataReady]);
 
   useEffect(() => {
     if (visualEffect.playbox) {
@@ -1535,23 +1791,39 @@ const Legends = ({setComponent}) => {
         <div className="nft-dock">
           {(nft === null || dataLoading) && <div className="nftText">…</div>}
           {nft > 0 && !dataLoading && (
-            <img
-              src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`}
-              alt={`NFT #${nft}`}
-              className="nftImage"
+            <button
+              type="button"
+              className="nft-dock-btn"
               onClick={() => {
                 setNftFlipInfo(false);
                 setNFTDisplay(true);
               }}
-            />
+              aria-label={`Open Cashcat #${nft} details`}
+            >
+              <img
+                src={`https://daemon.penny4thots.my/ipfsCache/${nft}.webp`}
+                alt={`NFT #${nft}`}
+                className="nftImage"
+                draggable={false}
+              />
+              <span className="nft-click-me">click me</span>
+            </button>
           )}
           {nft === 0 && !dataLoading && (
-            <img
-              src={require('./assets/images/nonftsfound.webp')}
-              alt="No NFT"
-              className="nftImage"
+            <button
+              type="button"
+              className="nft-dock-btn"
               onClick={noPlayNFT}
-            />
+              aria-label="No Cashcat NFT — open spawn help"
+            >
+              <img
+                src={require('./assets/images/nonftsfound.webp')}
+                alt="No NFT"
+                className="nftImage"
+                draggable={false}
+              />
+              <span className="nft-click-me">click me</span>
+            </button>
           )}
         </div>
         <div className="chrome-main">
@@ -1571,32 +1843,40 @@ const Legends = ({setComponent}) => {
               {dataReady && seasonPot != null && prizePot?.era != null && (
                 <div className="pot-chip" aria-label="Season pot">
                   <span className="smaller">Season {prizePot.era} pot</span>
-                  <span className="pot-value">{safeNum(seasonPot)} ETH</span>
+                  <span className="pot-value">{safeNum(seasonPot)} {blockchain.nativeSymbol}</span>
+                  <button
+                    type="button"
+                    className="outcome-details-btn pot-chip-details"
+                    onClick={openSeasonBoard}
+                    title="Season winners board"
+                  >
+                    Details
+                  </button>
                 </div>
               )}
             </div>
             <div className="scoreboard">
               <span className="stat">
-                <span className="stat-label">ETH</span>
+                <span className="stat-label">{blockchain.nativeSymbol}</span>
                 {walletBalance != null
                   ? <span className="goldtext">{safeNum(walletBalance)}</span>
                   : <span className="goldtext">…</span>}
               </span>
               {tokenBalance?.Mil != null && tokenBalance.Mil > 0 && (
                 <span className="stat">
-                  <span className="stat-label">CCC</span>
+                  <span className="stat-label">{blockchain.symbol}</span>
                   <span className="goldtext">{safeNum(tokenBalance.Mil)}M</span>
                 </span>
               )}
               {tokenBalance?.K != null && tokenBalance.K > 0 && (
                 <span className="stat">
-                  <span className="stat-label">CCC</span>
+                  <span className="stat-label">{blockchain.symbol}</span>
                   <span className="goldtext">{safeNum(tokenBalance.K)}K</span>
                 </span>
               )}
               {tokenBalance?.Data != null && tokenBalance.Data > 0 && !(tokenBalance?.Mil > 0) && !(tokenBalance?.K > 0) && (
                 <span className="stat">
-                  <span className="stat-label">CCC</span>
+                  <span className="stat-label">{blockchain.symbol}</span>
                   <span className="goldtext">{safeNum(tokenBalance.Data)}</span>
                 </span>
               )}
@@ -1612,8 +1892,8 @@ const Legends = ({setComponent}) => {
                     ? (dataLoading ? 'Loading game data…' : (dataError || 'Game data unavailable'))
                     : feePreview
                       ? (feePreview.ccc > 0
-                          ? `Requires ${safeNum(feePreview.eth)} ETH + ${safeNum(feePreview.ccc)} CCC${feePreview.hasNft ? ' (NFT rate)' : ''}`
-                          : `Requires ${safeNum(feePreview.eth)} ETH${feePreview.hasNft ? ' (NFT rate)' : ''}`)
+                          ? `Requires ${safeNum(feePreview.eth)} ${blockchain.nativeSymbol} + ${safeNum(feePreview.ccc)} ${blockchain.symbol}${feePreview.hasNft ? ' (NFT rate)' : ''}`
+                          : `Requires ${safeNum(feePreview.eth)} ${blockchain.nativeSymbol}${feePreview.hasNft ? ' (NFT rate)' : ''}`)
                       : 'Hunt!'
                 }
               >
@@ -1629,8 +1909,8 @@ const Legends = ({setComponent}) => {
                     {feePreview && (
                       <span className={`hunt-swap__face ${showHuntReq ? 'is-shown' : 'is-hidden'}`}>
                         <span className="hunt-swap__req">
-                          Requires {safeNum(feePreview.eth)} ETH
-                          {feePreview.ccc > 0 ? ` + ${safeNum(feePreview.ccc)} CCC` : ''}
+                          Requires {safeNum(feePreview.eth)} {blockchain.nativeSymbol}
+                          {feePreview.ccc > 0 ? ` + ${safeNum(feePreview.ccc)} ${blockchain.symbol}` : ''}
                         </span>
                       </span>
                     )}
@@ -1687,7 +1967,7 @@ const Legends = ({setComponent}) => {
                   alt={`Cashcat #${nft}`}
                   draggable={false}
                 />
-                <span className="nft-flip-hint">Tap image for details</span>
+                <span className="nft-flip-hint">click me</span>
               </div>
               <div className="nft-flip-face nft-flip-back">
                 <div className="nft-info">
@@ -1720,14 +2000,14 @@ const Legends = ({setComponent}) => {
                       Metadata still loading or unavailable for this edition.
                     </p>
                   )}
-                  <span className="nft-flip-hint">Tap to show image</span>
+                  <span className="nft-flip-hint">click me</span>
                 </div>
               </div>
             </div>
           </div>
 
           <a
-            href="https://opensea.io/collection/0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132"
+            href={`https://opensea.io/${blockchain.chainId}/${blockchain.address}`}
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
@@ -1749,8 +2029,8 @@ const Legends = ({setComponent}) => {
         <div className={`literary-content-hero ${animations.literaryHero ? 'animate-in' : ''}`}>
           <img src={require('./assets/images/diya.gif')} className="candle" />
           <span className="waveanimator quote literary-content-title">Rules Of Play</span>
-          <span className="literary-content-phonetic larger">The rules are simple. {isMobile ? ''  :  <br />}Pick a vestige, hit Play, and the chain rolls <span style={{color: 'gold'}}>two</span> fate numbers. {isMobile ? ''  :  <br />}If they <span style={{color: 'gold'}}>match</span> (about 1 in {challengersShown} for NFT heroes), you win the season ETH pot.</span>
-          <span className="literary-content-text">Randomness is fully on-chain — no external oracles. Non-holders face tougher odds.</span>
+          <span className="literary-content-phonetic larger">The rules are simple. {isMobile ? ''  :  <br />}Successfully <span style={{color: 'gold'}}>hunt</span> your bounty to win the prize pot. {isMobile ? ''  :  <br />}Your odds are favorable: a wholesome <span style={{color: 'gold'}}>match</span> (only 1 in 18) and you win this season's {blockchain.nativeSymbol} pot.</span>
+          <span className="literary-content-text">Play and earn multiple promotional token rewards while you hunt.</span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, hero: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
       </div>
@@ -1759,8 +2039,8 @@ const Legends = ({setComponent}) => {
         <div className={`literary-content-villain ${animations.literaryVillain ? 'animate-in' : ''} villany`}>
           <img src={require('./assets/images/candle-bowl.gif')} className="candle" />
           <span className="waveanimator forest literary-content-title">Choose Your Destiny!</span>
-          <span className="literary-content-phonetic larger">Cashcat or Human? Every play feeds the ETH pot. Match both fate numbers to claim this season's <>{dataReady && prizePot?.eth != null && <span style={{color: 'gold'}}> {safeNum(prizePot.eth)} ETH</span>}</> prize. </span>
-          <span className="literary-content-text">Heroes (Cashcat NFT holders) pay base ETH + $CASHCAT fees; humans pay a multiple.<br/>Own Cashcat NFTs to own heroes.</span>
+          <span className="literary-content-phonetic larger">To be or not to be? Every hunt feeds the {blockchain.nativeSymbol} pot. You are only one <span style={{color: 'gold'}}>good hunt</span> away from this season's <>{dataReady && prizePot?.eth != null && <span style={{color: 'gold'}}> {safeNum(prizePot.eth)} {blockchain.nativeSymbol}</span>}</> prize. </span>
+          <span className="literary-content-text">Cash Cat NFT owners pay a base fee in both {blockchain.nativeSymbol} + ${blockchain.symbol} fees. Non-holders face steeper odds by paying more.<br/> Helps to spawn a Cash Cat.</span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, villain: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
       </div>
@@ -1769,8 +2049,8 @@ const Legends = ({setComponent}) => {
         <div className={`literary-content-patron ${animations.literaryPatron ? 'animate-in' : ''} higher`}>
           <img src={require('./assets/images/scented-candle.gif')} className="candle" />
           <span className="waveanimator regal literary-content-title">How To Play</span>
-          <span className="literary-content-phonetic larger">Click any <span style={{color: 'teal'}}>vestige of humanity</span> below as your pick, then hit Play. The contract rolls two numbers on-chain (1–{challengersShown} for heroes).</span>
-          <span className="literary-content-text">If both draws match, you take the ETH pot. {isMobile ? ''  :  <br />}Miss, and your ETH fee grows the prize for the next cat. <span style={{color: 'gold'}}><BsEmojiHeartEyesFill /></span></span>
+          <span className="literary-content-phonetic larger">Click any <span style={{color: 'teal'}}>vestige of rodentry</span> below as your pick, then hit Hunt. The contract draws two numbers, all verifiable on-chain.</span>
+          <span className="literary-content-text">If both draws match, you take the {blockchain.nativeSymbol} pot. {isMobile ? ''  :  <br />}Miss, and your {blockchain.nativeSymbol} hunting fee grows the prize for the next cat. <span style={{color: 'gold'}}><BsEmojiHeartEyesFill /></span></span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, patron: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
       </div> 
@@ -1779,8 +2059,8 @@ const Legends = ({setComponent}) => {
         <div className={`literary-content-artifact tadhigh ${animations.literaryArtifact ? 'animate-in' : ''}`}>
           <img src={require('./assets/images/oil-lamp.gif')} className="candle" />
           <span className="waveanimator liberty literary-content-title">Low Risk - High Reward play</span>
-          <span className="literary-content-phonetic larger">Pay a small <span style={{color: 'gold'}}>ETH</span> entry fee (feeds the pot) plus a <span style={{color: 'gold'}}>$CASHCAT</span> token fee each play. {isMobile ? ''  :  <br />} Miss and your ETH stays in the pot for the <span style={{color: 'gold'}}>next attempt</span>.</span>
-          <span className="literary-content-text">If you own a Cashcat NFT, you gain a discount on the platform fee cut of your winnings. Currently sitting at {feeType !== null ? feeType : 0}% discount {feeType == 0 && "\(because you own none)."}</span>
+          <span className="literary-content-phonetic larger">Pay a small <span style={{color: 'gold'}}>{blockchain.nativeSymbol}</span> entry fee (feeds the pot) plus a <span style={{color: 'gold'}}>${blockchain.symbol}</span> token fee each play. {isMobile ? ''  :  <br />} Miss and your {blockchain.nativeSymbol} stays in the pot for the <span style={{color: 'gold'}}>next attempt</span>.</span>
+          <span className="literary-content-text">If you own a Cash Cat, you gain a significant discount on the platform fee on your winnings. Currently sitting at {feeType !== null ? feeType : 0}% discount {feeType == 0 && "\(because you own none)."}</span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, artifact: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
       </div>
@@ -1794,86 +2074,282 @@ const Legends = ({setComponent}) => {
       )}
       </div>
       {/* <Partner /> */}
+      {/* Returning player: local era cache != on-chain season */}
       {dataReady &&
         prizePot?.era != null &&
         counter !== prizePot.era &&
-        lastWinner?.pot != null &&
-        lastWinner?.address && (
-        <div className="prizewinner outcome-season" onClick={saveEreCounter} role="dialog" aria-label="New season">
-          <div className="outcome-card outcome-season" onClick={saveEreCounter}>
+        playOutcome == null &&
+        !showSeasonBoard && (
+        <div
+          className="prizewinner outcome-season"
+          onClick={saveEreCounter}
+          role="dialog"
+          aria-label="New season"
+        >
+          <div
+            className="outcome-card outcome-season"
+            onClick={(e) => e.stopPropagation()}
+          >
             <span className="outcome-badge">New season</span>
             <h2 className="outcome-title">A Cashcat found the light</h2>
             <div className="outcome-body">
-              <div>
-                <strong>{truncateAddress(lastWinner.address)}</strong> took{' '}
-                <span className="outcome-hl">{safeNum(lastWinner.pot)} ETH</span>
-                {lastWinner.timestamp ? <> on {lastWinner.timestamp}</> : null}.
+              {lastWinner?.address ? (
+                <div>
+                  Last season
+                  {lastWinner.era != null ? (
+                    <> (<span className="outcome-hl">Season {lastWinner.era}</span>)</>
+                  ) : null}
+                  {"'s pot was claimed by "}
+                  <strong>{truncateAddress(lastWinner.address)}</strong>
+                  {lastWinner.pot != null && (
+                    <>
+                      {" — "}
+                      <span className="outcome-hl">{safeNum(lastWinner.pot)} {blockchain.nativeSymbol}</span>
+                    </>
+                  )}
+                  {lastWinner.timestamp && lastWinner.timestamp !== "—" ? (
+                    <> on {lastWinner.timestamp}</>
+                  ) : null}
+                  .
+                </div>
+              ) : (
+                <div>A legend claimed the last season pot while you were away.</div>
+              )}
+              <div style={{ marginTop: "0.55rem" }}>
+                <strong>Season {prizePot.era} has already begun.</strong>
+                {" "}The hunt is live
+                {seasonPot != null && (
+                  <>
+                    {" — pot sits at "}
+                    <span className="outcome-eth">{safeNum(seasonPot)} {blockchain.nativeSymbol}</span>
+                  </>
+                )}
+                .
               </div>
-              <div style={{ marginTop: '0.5rem' }}>
-                Welcome to Season <strong>{prizePot.era}</strong>. Pot is now{' '}
-                <span className="outcome-eth">{safeNum(seasonPot)} ETH</span>.
+              <div style={{ marginTop: "0.35rem" }}>
+                Will you be the next name on the board?
               </div>
-              <div style={{ marginTop: '0.35rem' }}>Will you be next?</div>
             </div>
-            <div className="outcome-hint">Tap to continue</div>
+            <div className="outcome-actions">
+              <button
+                type="button"
+                className="outcome-details-btn"
+                onClick={openSeasonBoard}
+              >
+                Details
+              </button>
+              <button
+                type="button"
+                className="outcome-continue-btn"
+                onClick={saveEreCounter}
+              >
+                Continue hunting
+              </button>
+            </div>
+            <div className="outcome-hint">Tap outside to continue</div>
           </div>
         </div>
-       )}
-       {/* Dual-draw match (firstDraw == secondDraw) — contract win condition */}
-       {playOutcome === 'win' && (
-         <div className="prizewinner outcome-win" onClick={refreshState} role="dialog" aria-label="You won">
-           <div className="outcome-card outcome-win">
+      )}
+
+       {/* Win: themed hunt copy — deposit + next season retention, no draw numbers */}
+       {playOutcome === 'win' && !showSeasonBoard && (
+         <div
+           className="prizewinner outcome-win"
+           onClick={dismissWinAndContinue}
+           role="dialog"
+           aria-label="You won"
+         >
+           <div
+             className="outcome-card outcome-win"
+             onClick={(e) => e.stopPropagation()}
+           >
              <span className="outcome-badge">Jackpot</span>
              <h2 className="outcome-title">
                {winAmount
-                 ? "You won the season pot!"
-                 : "Double match — jackpot roll!"}
+                 ? "You claimed the season pot!"
+                 : "A perfect hunt!"}
              </h2>
              <div className="outcome-body">
-               <div>
-                 Draws <span className="outcome-hl">#{randomResult}</span>
-                 {' '}&amp;{' '}
-                 <span className="outcome-hl">#{playId != null ? playId : randomResult}</span>
-                 {' '}matched.
-               </div>
+               {(() => {
+                 const bountyName = formatLegendName(
+                   outcomeHunt.bounty || choiceKeyAtPlayRef.current || names.villain
+                 );
+                 const huntedName = formatLegendName(
+                   outcomeHunt.hunted || outcomeHunt.bounty || choiceKeyAtPlayRef.current || names.villain
+                 );
+                 return (
+                   <div>
+                     {bountyName ? (
+                       <>
+                         Your bounty was <span className="outcome-hl">{bountyName}</span>
+                         {', and you hunted '}
+                         <span className="outcome-hl">{huntedName || bountyName}</span>
+                         {' — bounty and quarry as one!'}
+                       </>
+                     ) : (
+                       <>Your bounty matched the hunt!</>
+                     )}
+                   </div>
+                 );
+               })()}
                {winAmount != null && winAmount > 0 && (
-                 <div style={{ marginTop: '0.45rem' }}>
-                   Payout ~ <span className="outcome-eth">{safeNum(winAmount)} ETH</span>
-                   {' '}→ <strong>{truncateAddress(account?.address)}</strong>
+                 <div style={{ marginTop: '0.5rem' }}>
+                   The pot is being deposited into your wallet now
+                   {' — '}
+                   <span className="outcome-eth">{safeNum(winAmount)} {blockchain.nativeSymbol}</span>
+                   {' → '}
+                   <strong>{truncateAddress(account?.address)}</strong>.
                  </div>
                )}
                {(!winAmount || winAmount <= 0) && (
-                 <div style={{ marginTop: '0.45rem' }}>
-                   Pot was empty this season — your fee seeded the next round.
+                 <div style={{ marginTop: '0.5rem' }}>
+                   The pot was empty this season — your fee seeds the next hunt.
                  </div>
                )}
+               <div style={{ marginTop: '0.5rem' }}>
+                 Your win closed this season —{" "}
+                 <strong>
+                   Season{" "}
+                   {prizePot?.era != null
+                     ? prizePot.era
+                     : "the next"}{" "}
+                   has already begun.
+                 </strong>{" "}
+                 Fresh quarry. Fresh pot. Keep hunting.
+               </div>
              </div>
-             <div className="outcome-hint">Tap to continue</div>
+             <div className="outcome-actions">
+               <button
+                 type="button"
+                 className="outcome-details-btn"
+                 onClick={openSeasonBoard}
+               >
+                 Details
+               </button>
+               <button
+                 type="button"
+                 className="outcome-continue-btn"
+                 onClick={dismissWinAndContinue}
+               >
+                 Hunt next season
+               </button>
+             </div>
+             <div className="outcome-hint">Tap outside to continue</div>
            </div>
          </div>
        )}
-       {playOutcome === 'lose' && randomResult != null && (
-         <div className="prizewinner outcome-lose" onClick={() => setPlayOutcome(null)} role="dialog" aria-label="No match">
+
+       {playOutcome === 'lose' && !showSeasonBoard && (
+         <div
+           className="prizewinner outcome-lose"
+           onClick={() => setPlayOutcome(null)}
+           role="dialog"
+           aria-label="No match"
+         >
            <div className="outcome-card outcome-lose">
              <span className="outcome-badge">No match</span>
              <h2 className="outcome-title">Close, but no cigar</h2>
              <div className="outcome-body">
-               <div>
-                 Draws <span className="outcome-hl">#{randomResult}</span>
-                 {playId != null && (
-                   <>
-                     {' '}&amp;{' '}
-                     <span className="outcome-hl">#{playId}</span>
-                   </>
-                 )}
-                 {' '}— both numbers must match to win.
-               </div>
+               {(() => {
+                 const bountyName = formatLegendName(
+                   outcomeHunt.bounty || choiceKeyAtPlayRef.current || names.villain
+                 ) || 'unknown';
+                 const huntedName = formatLegendName(outcomeHunt.hunted) || 'a different quarry';
+                 return (
+                   <div>
+                     Your bounty was <span className="outcome-hl">{bountyName}</span>
+                     {', but you hunted down '}
+                     <span className="outcome-hl">{huntedName}</span>.
+                   </div>
+                 );
+               })()}
                <div style={{ marginTop: '0.45rem' }}>
-                 Your ETH fee joined the season pot. Hunt again!
+                 Your bounty needs to match your hunt to win the match, so your{' '}
+                 <span className="outcome-hl">${blockchain.symbol}</span>
+                 {' '}fee has joined the season pot. Hunt again!
                </div>
              </div>
              <BsEmojiDizzyFill style={{ color: 'var(--lg-gold)', marginTop: '0.15rem', fontSize: '1.35rem' }} />
              <div className="outcome-hint">Tap to continue</div>
+           </div>
+         </div>
+       )}
+
+       {/* Seasons board — pastwinners from legends contract */}
+       {showSeasonBoard && (
+         <div
+           className="prizewinner outcome-board-overlay"
+           onClick={closeSeasonBoard}
+           role="dialog"
+           aria-label="Season winners board"
+         >
+           <div
+             className="outcome-card outcome-board"
+             onClick={(e) => e.stopPropagation()}
+           >
+             <span className="outcome-badge">Hall of fame</span>
+             <h2 className="outcome-title">Season winners</h2>
+             <p className="season-board-lead">
+               Legends who claimed the pot. Your name could be next.
+             </p>
+             {seasonBoardLoading && (
+               <div className="season-board-status">Loading past seasons…</div>
+             )}
+             {seasonBoardError && !seasonBoardLoading && (
+               <div className="season-board-status season-board-error">
+                 {seasonBoardError}
+               </div>
+             )}
+             {!seasonBoardLoading && !seasonBoardError && seasonBoard.length === 0 && (
+               <div className="season-board-status">
+                 No completed seasons yet — be the first legend on the board.
+               </div>
+             )}
+             {!seasonBoardLoading && seasonBoard.length > 0 && (
+               <div className="season-board-table-wrap">
+                 <table className="season-board-table">
+                   <thead>
+                     <tr>
+                       <th>Season</th>
+                       <th>Winner</th>
+                       <th>Pot</th>
+                       <th>When</th>
+                     </tr>
+                   </thead>
+                   <tbody>
+                     {seasonBoard.map((row) => (
+                       <tr key={`era-${row.era}-${row.winner}`}>
+                         <td className="season-board-era">#{row.era}</td>
+                         <td className="season-board-addr" title={row.winner}>
+                           {truncateAddress(row.winner)}
+                         </td>
+                         <td className="season-board-pot">
+                           {safeNum(row.amount)} {blockchain.nativeSymbol}
+                         </td>
+                         <td className="season-board-when">{row.timestamp}</td>
+                       </tr>
+                     ))}
+                   </tbody>
+                 </table>
+               </div>
+             )}
+             <div className="outcome-actions">
+               <button
+                 type="button"
+                 className="outcome-details-btn"
+                 onClick={openSeasonBoard}
+                 disabled={seasonBoardLoading}
+               >
+                 {seasonBoardLoading ? "Loading…" : "Refresh"}
+               </button>
+               <button
+                 type="button"
+                 className="outcome-continue-btn"
+                 onClick={closeSeasonBoard}
+               >
+                 Close
+               </button>
+             </div>
            </div>
          </div>
        )}

@@ -556,6 +556,11 @@ body, html {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, color 0.12s ease;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: inherit;
+  line-height: 1;
   font-size: 0.78rem;
   font-weight: 600;
 }

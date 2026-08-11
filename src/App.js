@@ -12,6 +12,7 @@ import { BiSolidVolumeMute, BiSolidVolumeFull, BiChevronDown, BiChevronUp } from
 import FlipBoxGallery from './FlipBoxGallery';
 import Mint from "./Mint";
 import Legends from "./Legends";
+import HowTo from "./HowTo";
 import { foregroundStoryboards, LegendaryHeroes, LegendaryChoices, foregroundStoryboardsMobile, backgroundMusic, visualEffects, auditArray, partnerArray} from "./tools/effects";
 import { Connector } from "./tools/utils";
 import { GrDocumentText } from "react-icons/gr";
@@ -30,6 +31,7 @@ function App () {
   const [visualEffect, setVisualEffect] = useState({playbox: false}); 
   const [errorMessage, setErrorMessage] = useState("");
   const [errorMessageVisible, setErrorMessageVisible] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
   
   let account = useActiveAccount(); 
 
@@ -138,7 +140,7 @@ function App () {
       setSoundtrack(backgroundMusic.Soundtrack);
       setVolumeLevel(0.7);
     } else {
-      setSoundtrack(backgroundMusic.Darkness);
+      setSoundtrack(backgroundMusic.SneakyAdventure);
       setVolumeLevel(0.4);
     }
   },[component]);
@@ -174,19 +176,18 @@ function App () {
       <div className="app-header__brand">
         <img src={visualEffects.logo} alt="Cashcats" className="logo" />
         <nav className="app-header__socials" aria-label="Social links">
-          <a
+          <button
+            type="button"
             className="social-btn"
-            href="https://cashcats.my"
-            target="_blank"
-            rel="noopener noreferrer"
-            title="Whitepaper / Docs"
+            onClick={() => setHowToOpen(true)}
+            title="How To Play"
           >
             <GrDocumentText aria-hidden />
             <span className="social-btn__label">How To</span>
-          </a>
+          </button>
           <a
             className="social-btn"
-            href="https://t.me/cashcats"
+            href="https://t.me/cashcatnetwork"
             target="_blank"
             rel="noopener noreferrer"
             title="Telegram"
@@ -196,7 +197,7 @@ function App () {
           </a>
           <a
             className="social-btn"
-            href="https://x.com/cashcats_base"
+            href="https://x.com/cashcatnetwork"
             target="_blank"
             rel="noopener noreferrer"
             title="X"
@@ -259,9 +260,14 @@ function App () {
                 <Connector />
               </div>
               <div className="mobile-socials">
-                <a className="social-btn" href="https://cashcats.my" target="_blank" rel="noopener noreferrer" title="How To Play">
-                  <GrDocumentText /><span>Docs</span>
-                </a>
+                <button
+                  type="button"
+                  className="social-btn"
+                  onClick={() => { setHowToOpen(true); setIsDropdownOpen(false); }}
+                  title="How To Play"
+                >
+                  <GrDocumentText /><span>How To</span>
+                </button>
                 <a className="social-btn" href="https://t.me/cashcatsnetwork" target="_blank" rel="noopener noreferrer" title="Telegram">
                   <FaTelegram /><span>Telegram</span>
                 </a>
@@ -285,6 +291,7 @@ function App () {
     </div>
     {component === 'mint' && <Mint setComponent={setComponent} />}
     {component === 'legends' && <Legends setComponent={setComponent} />}
+    <HowTo open={howToOpen} onClose={() => setHowToOpen(false)} />
     </>
   );
 };

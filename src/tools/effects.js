@@ -1,5 +1,5 @@
-import soundtrack from "../assets/sounds/music/trap.mp3";
-import darkness from "../assets/sounds/music/darkness.mp3";
+import soundtrack from "../assets/sounds/music/foam_rubber.mp3";
+import sneakyAdventure from "../assets/sounds/music/sneaky_adventure.mp3";
 import windhowl from "../assets/sounds/music/windhowl.mp3";
 import brick from "../assets/sounds/effects/bricksound.mp3";
 import concrete from "../assets/sounds/effects/concrete.mp3";
@@ -232,15 +232,23 @@ const documents = {
   Metadata: metadata,
 };
 
+/** Mint air-lane faces: distinct Cashcat breeds (not the old cake icons). */
 const visualEffects = {
   logo,
   logobase: baselogo,
-  air1,
-  air2,
-  air3,
-  air4,
-  air5,
-  air6,
+  air1: Maine,   // Maine Coon
+  air2: Siam,    // Siamese
+  air3: Persia,  // Persian
+  air4: Scot,    // Scottish Fold
+  air5: Mau,     // Egyptian Mau
+  air6: Curl,    // American Curl
+  // keep cake assets available if needed elsewhere
+  cake1: air1,
+  cake2: air2,
+  cake3: air3,
+  cake4: air4,
+  cake5: air5,
+  cake6: air6,
 }
 
 const auditArray = [sos_audit,tos_audit,los_audit]
@@ -265,7 +273,7 @@ const miscImages = {
 
 const backgroundMusic = {
   Soundtrack: soundtrack, 
-  Darkness: darkness,
+  SneakyAdventure: sneakyAdventure,
   Windhowl: windhowl,
 }
 
@@ -606,7 +614,7 @@ const literaryArtifacts = {
     text: 'Wingèd sandals of Hermes, they fly swifter than thought and lighter than shadow. In Spartan cause, they would carry messages or vengeance across sky and sea.'
   },
   Helm: {
-    name: 'Helm of Darkness',
+    name: 'Helm of SneakyAdventure',
     phonetic: '/hɛlm əv ˈdɑːknəs/',
     text: 'Wrought by the unseen hand for Hades himself, it cloaks the bearer in silence and fear. For Spartan spy or lone avenger, ‘tis a veil no eye can pierce.'
   },

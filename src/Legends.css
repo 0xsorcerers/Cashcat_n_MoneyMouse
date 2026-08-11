@@ -1507,6 +1507,28 @@
   align-self: stretch;
 }
 
+/* Clickable NFT frame (fills dock) */
+.nft-dock-btn {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  flex: 1 1 auto;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 14px;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+.nft-dock-btn:focus-visible {
+  outline: 2px solid rgba(255, 214, 120, 0.85);
+  outline-offset: 2px;
+}
+
 /* NFT fills dock to bottom of page; image fills & centers within the frame */
 .bottom-chrome .nftImage,
 .nft-dock .nftImage {
@@ -1527,6 +1549,30 @@
   z-index: auto;
   cursor: pointer;
   background: rgba(8, 9, 14, 0.65);
+  pointer-events: none;
+  display: block;
+}
+
+/* Small “click me” cue on the NFT dock */
+.nft-click-me {
+  position: absolute;
+  left: 50%;
+  bottom: 0.35rem;
+  transform: translateX(-50%);
+  z-index: 2;
+  font-size: clamp(0.52rem, 1.4vw, 0.65rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: rgba(255, 248, 230, 0.95);
+  background: rgba(0, 0, 0, 0.62);
+  border: 1px solid rgba(255, 214, 120, 0.45);
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 .bottom-chrome .nftText,
@@ -1712,7 +1758,7 @@
   display: inline-flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.1rem;
+  gap: 0.12rem;
   padding: 0.4rem 0.75rem;
   border-radius: 14px;
   border: 1px solid rgba(255, 214, 120, 0.35);
@@ -1720,7 +1766,7 @@
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
   font-family: var(--lg-ui);
   color: var(--lg-cream);
-  pointer-events: none;
+  pointer-events: auto; /* Details button must receive clicks */
 }
 .pot-chip .smaller {
   font-size: 0.65rem;
@@ -1907,6 +1953,203 @@
   color: rgba(247, 241, 230, 0.45);
 }
 
+.outcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin-top: 0.35rem;
+  width: 100%;
+}
+
+.outcome-details-btn,
+.outcome-continue-btn {
+  appearance: none;
+  cursor: pointer;
+  border-radius: 999px;
+  font-family: var(--lg-ui);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.55rem 1.05rem;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.outcome-details-btn {
+  color: var(--lg-cream);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 214, 120, 0.4);
+}
+
+.outcome-details-btn:hover:not(:disabled) {
+  border-color: rgba(245, 197, 66, 0.75);
+  background: rgba(245, 197, 66, 0.12);
+  transform: translateY(-1px);
+}
+
+.outcome-details-btn:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.outcome-continue-btn {
+  color: #1a1200;
+  background: linear-gradient(90deg, #ffe27a, #f5c542);
+  border: 1px solid transparent;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.outcome-continue-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+}
+
+.outcome-card.outcome-win .outcome-continue-btn {
+  background: linear-gradient(90deg, #6dffb0, #c8ffe0);
+  color: #062216;
+}
+
+.pot-chip-details {
+  margin-top: 0.1rem;
+  padding: 0.28rem 0.65rem !important;
+  font-size: 0.62rem !important;
+  letter-spacing: 0.1em !important;
+  line-height: 1.1;
+  pointer-events: auto;
+  align-self: stretch;
+  text-align: center;
+}
+
+/* Seasons hall-of-fame board */
+.outcome-card.outcome-board {
+  width: min(94vw, 560px);
+  max-height: min(88vh, 720px);
+  cursor: default;
+  align-items: stretch;
+  text-align: left;
+}
+
+.outcome-card.outcome-board .outcome-title,
+.outcome-card.outcome-board .outcome-badge,
+.outcome-card.outcome-board .season-board-lead,
+.outcome-card.outcome-board .outcome-actions {
+  text-align: center;
+  align-self: center;
+}
+
+.season-board-lead {
+  margin: 0 0 0.35rem;
+  color: var(--lg-muted);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.season-board-status {
+  text-align: center;
+  color: var(--lg-muted);
+  padding: 0.75rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.season-board-error {
+  color: #ffb4bd;
+}
+
+.season-board-table-wrap {
+  width: 100%;
+  max-height: min(48vh, 360px);
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 214, 120, 0.22);
+  background: rgba(6, 8, 14, 0.55);
+  margin: 0.25rem 0 0.15rem;
+}
+
+.season-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.season-board-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: rgba(18, 16, 10, 0.96);
+  color: var(--lg-gold);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  padding: 0.55rem 0.55rem;
+  border-bottom: 1px solid rgba(255, 214, 120, 0.25);
+  text-align: left;
+}
+
+.season-board-table tbody td {
+  padding: 0.5rem 0.55rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--lg-cream);
+  vertical-align: middle;
+}
+
+.season-board-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.season-board-table tbody tr:hover td {
+  background: rgba(245, 197, 66, 0.06);
+}
+
+.season-board-era {
+  color: var(--lg-gold) !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.season-board-addr {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-weight: 700;
+  color: var(--lg-gold-soft, #ffe8a8) !important;
+  white-space: nowrap;
+}
+
+.season-board-pot {
+  color: var(--lg-ok) !important;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.season-board-when {
+  color: var(--lg-muted) !important;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+@media only screen and (max-width: 768px) {
+  .season-board-table thead th:nth-child(4),
+  .season-board-table tbody td:nth-child(4) {
+    display: none; /* drop timestamp column on narrow screens */
+  }
+
+  .outcome-card.outcome-board {
+    width: min(96vw, 560px);
+    padding: 1rem 0.85rem 1.15rem;
+  }
+
+  .outcome-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .outcome-details-btn,
+  .outcome-continue-btn {
+    width: 100%;
+  }
+}
+
 /* Soft fate states without fighting original placement */
 .characterImage.fate-previous {
   opacity: 0.55 !important;
@@ -1954,6 +2197,10 @@
     min-height: 100%;
   }
 
+  .nft-dock-btn {
+    border-radius: 12px;
+  }
+
   .bottom-chrome .nftImage,
   .nft-dock .nftImage {
     position: relative !important;
@@ -1968,6 +2215,12 @@
     border: 2px solid rgba(255, 255, 255, 0.9) !important;
     object-fit: cover;
     object-position: center center;
+  }
+
+  .nft-click-me {
+    bottom: 0.28rem;
+    font-size: 0.5rem;
+    padding: 0.14rem 0.38rem;
   }
 
   .bottom-chrome .nftText,

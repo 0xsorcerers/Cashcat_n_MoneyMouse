@@ -69,7 +69,44 @@ const safeFormatEther = (wei) => {
   }
 };
 
+/** Known custom-error selectors (OpenZeppelin v5 ERC20). */
+const KNOWN_ERROR_SELECTORS = {
+  // ERC20InsufficientAllowance(address,uint256,uint256)
+  '0xfb8f41b2':
+    `Token allowance too low — the mint contract could not pull $${blockchain.symbol}. Wait for the approve transaction to confirm, then try Mint again.`,
+  // ERC20InsufficientBalance(address,uint256,uint256)
+  '0xe450d38c': `Insufficient ${blockchain.symbol} balance for the token mint fee.`,
+};
+
+const extractErrorSelector = (error) => {
+  const candidates = [
+    error?.data,
+    error?.error?.data,
+    error?.info?.error?.data,
+    error?.cause?.data,
+    error?.reason,
+    error?.shortMessage,
+    error?.message,
+  ];
+  for (const c of candidates) {
+    if (typeof c === 'string') {
+      const m = c.match(/0x[0-9a-fA-F]{8}/);
+      if (m) return m[0].toLowerCase();
+    }
+    if (c && typeof c === 'object' && typeof c.data === 'string') {
+      const m = c.data.match(/0x[0-9a-fA-F]{8}/);
+      if (m) return m[0].toLowerCase();
+    }
+  }
+  const blob = JSON.stringify(error ?? {});
+  const m = blob.match(/0xfb8f41b2|0xe450d38c/i);
+  return m ? m[0].toLowerCase() : null;
+};
+
 const parseTxError = (error) => {
+  const sel = extractErrorSelector(error);
+  if (sel && KNOWN_ERROR_SELECTORS[sel]) return KNOWN_ERROR_SELECTORS[sel];
+
   const raw =
     error?.reason ||
     error?.shortMessage ||
@@ -77,24 +114,86 @@ const parseTxError = (error) => {
     error?.data?.message ||
     '';
   const s = String(raw);
-  if (/Insufficient fee/i.test(s)) return 'Insufficient ETH fee for mint.';
+  if (/0xfb8f41b2|ERC20InsufficientAllowance|insufficient allowance/i.test(s)) {
+    return KNOWN_ERROR_SELECTORS['0xfb8f41b2'];
+  }
+  if (/0xe450d38c|ERC20InsufficientBalance/i.test(s)) {
+    return KNOWN_ERROR_SELECTORS['0xe450d38c'];
+  }
+  if (/Insufficient fee/i.test(s)) return `Insufficient ${blockchain.nativeSymbol} fee for mint.`;
   if (/Public Phase Has Not Yet Begun/i.test(s)) return 'Public mint phase has not started yet.';
   if (/Mint Not Live/i.test(s)) return 'Mint is not live yet.';
   if (/Paused Contract/i.test(s)) return 'Mint is paused.';
   if (/Max Exceeded/i.test(s)) return 'Max supply reached.';
   if (/user rejected|denied|User rejected|ACTION_REJECTED/i.test(s)) return 'Request cancelled.';
-  if (/insufficient funds|exceeds the balance/i.test(s)) return 'Not enough ETH for fee + gas.';
-  if (/ERC20Insufficient|insufficient allowance|transfer amount exceeds|SafeERC20/i.test(s)) {
+  if (/insufficient funds|exceeds the balance/i.test(s)) return `Not enough ${blockchain.nativeSymbol} for fee + gas.`;
+  if (/ERC20Insufficient|transfer amount exceeds|SafeERC20/i.test(s)) {
     return `Not enough ${blockchain.symbol} (or allowance) for the token fee.`;
+  }
+  if (/Encoded error signature/i.test(s)) {
+    return (
+      (sel && KNOWN_ERROR_SELECTORS[sel]) ||
+      'Contract rejected the transaction. If you just approved tokens, wait for confirmation and try Mint again.'
+    );
   }
   if (error?.shortMessage && !/Encoded error signature/i.test(error.shortMessage)) {
     return error.shortMessage;
   }
-  return s ? s.slice(0, 120) : 'Failed to mint.';
+  return s ? s.slice(0, 160) : 'Failed to mint.';
+};
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/** Wait for a wallet tx to be mined (not merely submitted). */
+const waitForTxMined = async (txResult, label = 'Transaction') => {
+  const transactionHash =
+    typeof txResult === 'string'
+      ? txResult
+      : txResult?.transactionHash || txResult?.hash;
+  if (!transactionHash) {
+    throw new Error(`${label}: no transaction hash returned from wallet.`);
+  }
+  const receipt = await waitForReceipt({
+    client,
+    chain: base,
+    transactionHash,
+  });
+  const bad =
+    receipt?.status === 'reverted' ||
+    receipt?.status === 0 ||
+    receipt?.status === '0' ||
+    receipt?.status === false;
+  if (bad) {
+    throw new Error(`${label} reverted on-chain.`);
+  }
+  return { receipt, transactionHash };
 };
 
 /**
- * Mint page — free whitelist or paid (ETH fee + optional $CASHCAT tokenFee).
+ * Poll ERC20 allowance until >= needed (or timeout).
+ * Guards against RPC lag right after an approve receipt lands.
+ */
+const waitForAllowance = async (
+  owner,
+  spender,
+  needed,
+  { attempts = 24, delayMs = 750 } = {}
+) => {
+  let last = 0n;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      last = toBigInt(await cashcatContract.allowance(owner, spender));
+      if (last >= needed) return last;
+    } catch (e) {
+      console.warn('allowance poll failed:', e?.message || e);
+    }
+    await sleep(delayMs);
+  }
+  return last;
+};
+
+/**
+ * Mint page — free whitelist or paid (native fee + optional token fee).
  */
 const Mint = ({ setComponent }) => {
   const [eligibleMints, setEligibleMints] = useState({
@@ -123,6 +222,8 @@ const Mint = ({ setComponent }) => {
   const [tokenBal, setTokenBal] = useState(null);
   /** Raw wei token balance */
   const [tokenBalWei, setTokenBalWei] = useState(0n);
+  /** ERC-721 CASHCATS owned by the connected wallet */
+  const [nftOwned, setNftOwned] = useState(null);
 
   /** Paid mint fees from getMintData (wei + display) */
   const [ethFeeWei, setEthFeeWei] = useState(0n);
@@ -366,18 +467,40 @@ const Mint = ({ setComponent }) => {
     }
   }, [account?.address]);
 
+  /** ERC-721 balanceOf — how many CASHCATS NFTs this wallet holds */
+  const fetchNftOwned = useCallback(async (playerAddr) => {
+    const addr = playerAddr || account?.address;
+    if (!addr) {
+      setNftOwned(null);
+      return 0;
+    }
+    try {
+      const raw = await contract.balanceOf(addr);
+      const n = Number(raw);
+      const count = Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 0;
+      setNftOwned(count);
+      return count;
+    } catch (error) {
+      console.error('fetchNftOwned failed:', error);
+      setNftOwned(null);
+      return 0;
+    }
+  }, [account?.address]);
+
   const refreshAll = useCallback(async () => {
     if (!account?.address) return;
     await Promise.all([
       fetchMintData(account.address),
       fetchTokenBalance(account.address),
+      fetchNftOwned(account.address),
     ]);
-  }, [account?.address, fetchMintData, fetchTokenBalance]);
+  }, [account?.address, fetchMintData, fetchTokenBalance, fetchNftOwned]);
 
   useEffect(() => {
     if (account?.address) {
       refreshAll();
     } else {
+      setNftOwned(null);
       // Public snapshot (zero address) so fee copy still loads before login
       fetchMintData(ethers.ZeroAddress);
     }
@@ -616,18 +739,18 @@ const Mint = ({ setComponent }) => {
       const needEth = md.ethFeeWei;
       const needTok = md.tokenFeeWei;
 
-      // ETH balance check (fee only; gas is extra)
+      // Native balance check (fee only; gas is extra)
       const ethBalWei = walletBalData?.value != null
         ? toBigInt(walletBalData.value)
         : (accountBal != null ? ethers.parseEther(String(accountBal)) : 0n);
 
       if (needEth > 0n && ethBalWei < needEth) {
         showError(
-          `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needEth)))} ETH` +
+          `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.nativeSymbol}` +
           (needTok > 0n
             ? ` + ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}.`
             : '.') +
-          ' Top up ETH and try again.'
+          ` Top up ${blockchain.nativeSymbol} and try again.`
         );
         return;
       }
@@ -639,18 +762,18 @@ const Mint = ({ setComponent }) => {
           showError(
             `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}` +
             (needEth > 0n
-              ? ` + ${formatNumber(Number(safeFormatEther(needEth)))} ETH.`
+              ? ` + ${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.nativeSymbol}.`
               : '.') +
             ` Your balance is too low.`
           );
           return;
         }
 
-        const allowanceRaw = await cashcatContract.allowance(
-          account.address,
-          blockchain.address
+        // Spender must be the NFT mint contract (pulls cyberFee / tokenFee via transferFrom)
+        const spender = blockchain.address;
+        let allowance = toBigInt(
+          await cashcatContract.allowance(account.address, spender)
         );
-        const allowance = toBigInt(allowanceRaw);
 
         if (allowance < needTok) {
           setIsApproving(true);
@@ -661,10 +784,28 @@ const Mint = ({ setComponent }) => {
           const approveTx = prepareContractCall({
             contract: thirdwebCASHCATContract,
             method: 'function approve(address spender, uint256 value)',
-            params: [blockchain.address, needTok],
+            params: [spender, needTok],
           });
-          await sendTransactionAsync(approveTx);
+          // 1) Submit approve
+          const approveResult = await sendTransactionAsync(approveTx);
+          // 2) Wait until approve is mined — sending mint too early causes
+          //    ERC20InsufficientAllowance (selector 0xfb8f41b2)
+          showInfo('Waiting for approval to confirm on-chain…', 'info');
+          await waitForTxMined(approveResult, 'Approve');
+          // 3) Poll allowance in case the RPC still serves a stale value
+          allowance = await waitForAllowance(
+            account.address,
+            spender,
+            needTok
+          );
           setIsApproving(false);
+
+          if (allowance < needTok) {
+            showError(
+              `Approval confirmed but allowance is still too low (${formatNumber(Number(safeFormatEther(allowance)))} < ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}). Wait a few seconds and tap Mint again.`
+            );
+            return;
+          }
           showInfo(`${blockchain.symbol} approved. Submitting mint…`, 'success');
         }
       }
@@ -672,7 +813,7 @@ const Mint = ({ setComponent }) => {
       setIsMinting(true);
       showInfo(
         needEth > 0n
-          ? `Submitting paid mint (${formatNumber(Number(safeFormatEther(needEth)))} ETH)…`
+          ? `Submitting paid mint (${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.nativeSymbol})…`
           : 'Submitting paid mint…',
         'info'
       );
@@ -770,7 +911,7 @@ const Mint = ({ setComponent }) => {
       <span className="countText countTextShrink">
         {ethFee != null ? formatNumber(ethFee) : '—'}
       </span>{' '}
-      ETH
+      {blockchain.nativeSymbol}
       {' + '}
       <span className="countText countTextShrink">
         {tokenFee != null ? formatNumber(tokenFee) : '—'}
@@ -785,7 +926,7 @@ const Mint = ({ setComponent }) => {
       <span className="countText countTextTiny" style={{ fontSize: 'medium' }}>
         {ethFee != null ? formatNumber(ethFee) : '—'}
       </span>{' '}
-      ETH +{' '}
+      {blockchain.nativeSymbol} +{' '}
       <span className="countText countTextTiny" style={{ fontSize: 'medium' }}>
         {tokenFee != null ? formatNumber(tokenFee) : '—'}
       </span>{' '}
@@ -808,55 +949,43 @@ const Mint = ({ setComponent }) => {
             <div className="mintOutlay">
               <div className="mintChecker">
                 <div className="air1 mintbox">
-                  <img src={visualEffects.air1} className="icon" alt="Air1" />
-                  <br />
+                  <img src={visualEffects.air1} className="icon" alt="Maine Coon" />
                   <span className="mintText">Air1 x {eligibleMints.air1}</span>
-                  <br />
                   <span className="mintedText pink">
                     {minted.air1} / {mintLimits.air1} minted
                   </span>
                 </div>
                 <div className="air2 mintbox">
-                  <img src={visualEffects.air2} className="icon" alt="Air2" />
-                  <br />
+                  <img src={visualEffects.air2} className="icon" alt="Siamese" />
                   <span className="mintText">Air2 x {eligibleMints.air2}</span>
-                  <br />
                   <span className="mintedText pink">
                     {minted.air2} / {mintLimits.air2} minted
                   </span>
                 </div>
                 <div className="air3 mintbox">
-                  <img src={visualEffects.air3} className="icon" alt="Air3" />
-                  <br />
+                  <img src={visualEffects.air3} className="icon" alt="Persian" />
                   <span className="mintText">Air3 x {eligibleMints.air3}</span>
-                  <br />
                   <span className="mintedText pink">
                     {minted.air3} / {mintLimits.air3} minted
                   </span>
                 </div>
                 <div className="air4 mintbox">
-                  <img src={visualEffects.air4} className="icon" alt="Air4" />
-                  <br />
+                  <img src={visualEffects.air4} className="icon" alt="Scottish Fold" />
                   <span className="mintText">Air4 x {eligibleMints.air4}</span>
-                  <br />
                   <span className="mintedText pink">
                     {minted.air4} / {mintLimits.air4} minted
                   </span>
                 </div>
                 <div className="air5 mintbox">
-                  <img src={visualEffects.air5} className="icon" alt="Air5" />
-                  <br />
+                  <img src={visualEffects.air5} className="icon" alt="Egyptian Mau" />
                   <span className="mintText">Air5 x {eligibleMints.air5}</span>
-                  <br />
                   <span className="mintedText pink">
                     {minted.air5} / {mintLimits.air5} minted
                   </span>
                 </div>
                 <div className="air6 mintbox">
-                  <img src={visualEffects.air6} className="icon" alt="Air6" />
-                  <br />
+                  <img src={visualEffects.air6} className="icon" alt="American Curl" />
                   <span className="mintText">Air6 x {eligibleMints.air6}</span>
-                  <br />
                   <span className="mintedText pink">
                     {minted.air6} / {mintLimits.air6} minted
                   </span>
@@ -869,12 +998,19 @@ const Mint = ({ setComponent }) => {
                 ) : (
                   <div className="countText">0</div>
                 )}
-                <div className="rewardsTextSmall">CASHCATS NFTs</div>
+                <div className="rewardsTextSmall">CASHCATS NFTs for free</div>
                 {condition ? (
                   <div className="rewardsTextSmall pink">All whitelisted mints are free.</div>
                 ) : (
                   <div className="rewardsTextSmall sunfire">{feeLine}.</div>
                 )}
+                <div className="mint-owned">
+                  You own{' '}
+                  <span className="mint-owned-count">
+                    {nftOwned != null ? nftOwned : '…'}
+                  </span>{' '}
+                  CASHCATS NFT{nftOwned === 1 ? '' : 's'}
+                </div>
                 <div className="mintpanel">
                   {countDown <= 0 ? (
                     <button
@@ -906,99 +1042,104 @@ const Mint = ({ setComponent }) => {
             <div className="mobileOutlay">
               <div className="mobileChecker">
                 <div className="air1 mobileMintbox" align="center">
-                  <img src={visualEffects.air1} className="icon" alt="Air1" />
+                  <img src={visualEffects.air1} className="icon" alt="Maine Coon" />
                 </div>
-                <div className="mobileMintText">Air1 x {eligibleMints.air1}</div>
+                <div className="mobileMintText">Air1 x {eligibleMints.air1 ?? 0}</div>
                 <div className="mobileMintedText pink">
-                  {minted.air1} / {mintLimits.air1} minted
+                  {minted.air1 ?? 0} / {mintLimits.air1 ?? 0} minted
                 </div>
               </div>
               <div className="mobileChecker">
                 <div className="air2 mobileMintbox" align="center">
-                  <img src={visualEffects.air2} className="icon" alt="Air2" />
+                  <img src={visualEffects.air2} className="icon" alt="Siamese" />
                 </div>
-                <div className="mobileMintText">Air2 x {eligibleMints.air2}</div>
+                <div className="mobileMintText">Air2 x {eligibleMints.air2 ?? 0}</div>
                 <div className="mobileMintedText pink">
-                  {minted.air2} / {mintLimits.air2} minted
+                  {minted.air2 ?? 0} / {mintLimits.air2 ?? 0} minted
                 </div>
               </div>
-            </div>
-            <div className="mobileChecker">
-              <div className="air3 mobileMintbox" align="center">
-                <img src={visualEffects.air3} className="icon" alt="Air3" />
+              <div className="mobileChecker">
+                <div className="air3 mobileMintbox" align="center">
+                  <img src={visualEffects.air3} className="icon" alt="Persian" />
+                </div>
+                <div className="mobileMintText">Air3 x {eligibleMints.air3 ?? 0}</div>
+                <div className="mobileMintedText pink">
+                  {minted.air3 ?? 0} / {mintLimits.air3 ?? 0} minted
+                </div>
               </div>
-              <div className="mobileMintText">Air3 x {eligibleMints.air3}</div>
-              <div className="mobileMintedText pink">
-                {minted.air3} / {mintLimits.air3} minted
+              <div className="mobileChecker">
+                <div className="air4 mobileMintbox" align="center">
+                  <img src={visualEffects.air4} className="icon" alt="Scottish Fold" />
+                </div>
+                <div className="mobileMintText">Air4 x {eligibleMints.air4 ?? 0}</div>
+                <div className="mobileMintedText pink">
+                  {minted.air4 ?? 0} / {mintLimits.air4 ?? 0} minted
+                </div>
               </div>
-            </div>
-            <div className="mobileChecker">
-              <div className="air4 mobileMintbox" align="center">
-                <img src={visualEffects.air4} className="icon" alt="Air4" />
+              <div className="mobileChecker">
+                <div className="air5 mobileMintbox" align="center">
+                  <img src={visualEffects.air5} className="icon" alt="Egyptian Mau" />
+                </div>
+                <div className="mobileMintText">Air5 x {eligibleMints.air5 ?? 0}</div>
+                <div className="mobileMintedText pink">
+                  {minted.air5 ?? 0} / {mintLimits.air5 ?? 0} minted
+                </div>
               </div>
-              <div className="mobileMintText">Air4 x {eligibleMints.air4}</div>
-              <div className="mobileMintedText pink">
-                {minted.air4} / {mintLimits.air4} minted
+              <div className="mobileChecker">
+                <div className="air6 mobileMintbox" align="center">
+                  <img src={visualEffects.air6} className="icon" alt="American Curl" />
+                </div>
+                <div className="mobileMintText">Air6 x {eligibleMints.air6 ?? 0}</div>
+                <div className="mobileMintedText pink">
+                  {minted.air6 ?? 0} / {mintLimits.air6 ?? 0} minted
+                </div>
               </div>
-            </div>
-            <div className="mobileChecker">
-              <div className="air5 mobileMintbox" align="center">
-                <img src={visualEffects.air5} className="icon" alt="Air5" />
-              </div>
-              <div className="mobileMintText">Air5 x {eligibleMints.air5}</div>
-              <div className="mobileMintedText pink">
-                {minted.air5} / {mintLimits.air5} minted
-              </div>
-            </div>
-            <div className="mobileChecker">
-              <div className="air6 mobileMintbox" align="center">
-                <img src={visualEffects.air6} className="icon" alt="Air6" />
-              </div>
-              <div className="mobileMintText">Air6 x {eligibleMints.air6}</div>
-              <div className="mobileMintedText pink">
-                {minted.air6} / {mintLimits.air6} minted
-              </div>
-            </div>
 
-            <div className="minipanel">
-              <>
+              {/* Eligibility summary — mirrors desktop mint-status */}
+              <div className="minipanel mint-status mint-status--mobile">
+                <div className="rewardsText">You are eligible to mint</div>
+                <div className="countText">
+                  {condition ? (eligibleMints.total ?? 0) : 0}
+                </div>
+                <div className="rewardsTextSmall">
+                  {condition ? 'CASHCATS NFTs for free' : 'CASHCATS NFTs'}
+                </div>
                 {condition ? (
-                  <>
-                    <div className="rewardsText"> You can mint </div>
-                    <div className="countText">{eligibleMints.total}</div>
-                    <div className="rewardsTextSmall">NFTs for free</div>
-                  </>
+                  <div className="rewardsTextSmall pink">All whitelisted mints are free.</div>
                 ) : (
-                  <>
-                    <div className="rewardsText"> Mint</div>
-                    <div className="countText">1</div>
-                    <div className="rewardsTextSmall sunfire">{feeLineMobile}.</div>
-                  </>
+                  <div className="rewardsTextSmall sunfire">{feeLineMobile}.</div>
                 )}
-              </>
-              <div>
-                {countDown <= 0 ? (
-                  <button
-                    className="mint-button"
-                    onClick={handleMint}
-                    disabled={loading}
-                    style={loading ? { opacity: 0.5, cursor: 'not-allowed' } : { cursor: 'pointer' }}
-                  >
-                    <span className="smaller">{condition ? 'free' : 'paid'}</span>
-                    {buttonLabel()}
-                  </button>
-                ) : (
-                  <button
-                    className="mint-button"
-                    onClick={() => {
-                      setComponent('home');
-                      disconnect(wallet);
-                    }}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    Logout
-                  </button>
-                )}
+                <div className="mint-owned">
+                  You own{' '}
+                  <span className="mint-owned-count">
+                    {nftOwned != null ? nftOwned : '…'}
+                  </span>{' '}
+                  CASHCATS NFT{nftOwned === 1 ? '' : 's'}
+                </div>
+                <div className="mintpanel">
+                  {countDown <= 0 ? (
+                    <button
+                      className="mint-button"
+                      onClick={handleMint}
+                      disabled={loading}
+                      style={loading ? { opacity: 0.5, cursor: 'not-allowed' } : { cursor: 'pointer' }}
+                    >
+                      <span className="smaller">{condition ? 'free' : 'paid'}</span>
+                      {buttonLabel()}
+                    </button>
+                  ) : (
+                    <button
+                      className="mint-button"
+                      onClick={() => {
+                        setComponent('home');
+                        disconnect(wallet);
+                      }}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      Logout
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </Mobile>
