@@ -63,7 +63,7 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
     event Unpause();
 
     address public cashcat;
-    address public gameDAO;
+    address private gameDAO;
     address public burnAddress;
     address public bobbAddress;
     address public stakeAddress;
