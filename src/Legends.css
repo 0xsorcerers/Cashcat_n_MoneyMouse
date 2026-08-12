@@ -1,9 +1,22 @@
-﻿.legends-container {
+﻿/*
+ * Arena is a single locked viewport — no page scroll (x or y).
+ * Only .bottom-chrome .panel may scroll horizontally for mouse picks.
+ */
+.legends-container {
   position: fixed;
+  inset: 0;
   left: 0;
-  width: 100vw;
-  height: 100vh;
-  aspect-ratio: 16/9;
+  top: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  box-sizing: border-box;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -47,7 +60,10 @@
   position: fixed;
   top: 2vh;
   height: 65vh;
+  max-height: min(65vh, calc(100dvh - var(--lg-chrome-h, 10rem) - 1rem));
   width: auto;
+  max-width: min(36vw, 100%);
+  object-fit: contain;
   /* border-radius: 5vh; */
 }
 
@@ -974,7 +990,8 @@
     z-index: 2;
   }
   .index12 {
-    top: 42vh; /* lowered a little from 38vh */
+    /* Half of the 42→48vh lower; frees a little air above bottom chrome */
+    top: 45vh;
     left: 1vw;
     width: 62vw; /* slightly bigger — result is the key reveal */
     max-width: 66vw;
@@ -994,8 +1011,14 @@
     left: 6vw;
     font-size: medium;
   }
+  /*
+   * Match fate label — half of prior drop toward chrome
+   * (was top: 60vh → bottom snug on chrome; now midway via larger offset).
+   * --lg-chrome-h is set in the bottom-chrome mobile block below.
+   */
   .villainText {
-    top: 60vh;
+    top: auto;
+    bottom: calc(var(--lg-chrome-h, 7.5rem) + 2.75rem);
     left: 8vw;
     right: auto;
     font-size: 0.95rem;
@@ -1005,7 +1028,7 @@
     white-space: nowrap;
   }
   .villainName {
-    top: 46vh;
+    top: 48vh;
     left: 60vw;
     font-size: large;
     z-index: 4;
@@ -1422,8 +1445,15 @@
 .legends-container {
   isolation: isolate;
   height: 100dvh;
+  max-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
   overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
+  overscroll-behavior: none;
   background-color: #0b0c10;
+  box-sizing: border-box;
 }
 
 .legends-container::before {
@@ -1477,12 +1507,15 @@
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4) !important;
 }
 
-/* Bottom chrome: NFT + selection + tray */
+/* Bottom chrome: NFT + selection + tray (fixed; never expands page scroll) */
 .bottom-chrome {
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   z-index: var(--z-chrome);
   display: grid;
   grid-template-columns: var(--lg-nft-w) minmax(0, 1fr);
@@ -1492,6 +1525,7 @@
   padding: 0.45rem 0.55rem max(0.45rem, env(safe-area-inset-bottom));
   background: linear-gradient(180deg, transparent 0%, rgba(4, 5, 10, 0.45) 18%, rgba(4, 5, 10, 0.85) 100%);
   pointer-events: none;
+  overflow: visible; /* hunt multiplier menu may rise above */
 }
 .bottom-chrome > * { pointer-events: auto; }
 
@@ -1631,6 +1665,9 @@
   opacity: 1 !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
+  overscroll-behavior-x: contain; /* don't chain horizontal scroll to the page */
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
   align-self: flex-start;
   gap: 0.4rem;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.4);
@@ -2443,12 +2480,116 @@
   filter: drop-shadow(0 0 14px rgba(245, 197, 66, 0.45));
 }
 
+/* =========================================================
+   DESKTOP HUNT BUTTON ONLY — seamless pill + stable label size.
+   Mobile hunt chrome stays on the original base rules above.
+   ========================================================= */
+@media only screen and (min-width: 769px) {
+  .hunt-split {
+    min-height: 3.25rem;
+    border-radius: 999px;
+    box-shadow: 0 6px 0 rgba(120, 80, 0, 0.35), 0 10px 22px rgba(0, 0, 0, 0.35);
+    overflow: visible;
+  }
+
+  .hunt-split__main.legend-button {
+    border-top-left-radius: 999px !important;
+    border-bottom-left-radius: 999px !important;
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    width: auto !important;
+    min-width: 11.5rem;
+    max-width: none !important;
+    flex: 1 1 auto;
+    min-height: 3.25rem !important;
+    height: auto !important;
+    padding: 0.55rem 1.1rem 0.55rem 1.4rem !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* Keep the pill glued — no solo hover lift on either half */
+  .hunt-split .legend-button:hover:not(:disabled),
+  .hunt-split .legend-button:active:not(:disabled) {
+    transform: none;
+    filter: none;
+  }
+  .hunt-split:hover {
+    filter: brightness(1.04);
+  }
+  .hunt-split:active {
+    transform: translateY(1px);
+    box-shadow: 0 3px 0 rgba(120, 80, 0, 0.35), 0 6px 14px rgba(0, 0, 0, 0.3);
+  }
+
+  .hunt-split__side {
+    align-items: stretch;
+  }
+
+  .hunt-split__toggle {
+    min-width: 3.25rem;
+    min-height: 3.25rem;
+    height: 100%;
+    padding: 0.45rem 0.65rem;
+    border-radius: 0 999px 999px 0;
+    border-left: 1px solid rgba(80, 50, 0, 0.32);
+    box-shadow: none;
+  }
+
+  /*
+   * Hunt label swap — grid-stack both faces so the larger face sizes the button.
+   * Absolute faces used to collapse width until the fee face shows.
+   */
+  .hunt-swap {
+    display: grid;
+    grid-template: 1fr / 1fr;
+    place-items: center;
+    width: max-content;
+    min-width: 9.25rem;
+    max-width: 14rem;
+    min-height: 2.35em;
+    margin: 0 auto;
+  }
+  .hunt-swap__face {
+    grid-area: 1 / 1;
+    position: relative;
+    width: max-content;
+    max-width: 14rem;
+    padding: 0 0.15rem;
+  }
+  .hunt-swap__face.is-hidden {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(0.98);
+    pointer-events: none;
+  }
+  .hunt-swap__face.is-shown {
+    opacity: 1;
+    visibility: visible;
+    transform: scale(1);
+  }
+  .hunt-swap__title {
+    font-size: 1.15em;
+    white-space: nowrap;
+  }
+  .hunt-swap__req {
+    max-width: 13.5rem;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
 @media only screen and (max-width: 768px) {
   :root {
     --lg-hud-h: auto;
-    --lg-panel-h: clamp(64px, 12vh, 84px);
-    --lg-nft-w: clamp(58px, 16vw, 76px);
-    --lg-chrome-h: calc(var(--lg-panel-h) + 4.85rem);
+    /* Compact selection strip; NFT column a bit wider beside chrome-main */
+    --lg-panel-h: clamp(60px, 11vh, 78px);
+    --lg-nft-w: clamp(78px, 22vw, 104px);
+    /* panel + compact tray (balances stacked over hunt) + chrome padding */
+    --lg-chrome-h: calc(var(--lg-panel-h) + 3.35rem);
   }
 
   /* Polished mobile chrome — selection tray, NFT dock, bottom tray */
@@ -2457,10 +2598,12 @@
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
+    /* NFT column + chrome-main (selection strip stacked over bottom HUD tray) */
     grid-template-columns: var(--lg-nft-w) minmax(0, 1fr);
-    gap: 0.4rem;
+    gap: 0.3rem;
+    /* Stretch so NFT spans selection top → bottom-tray bottom */
     align-items: stretch;
-    padding: 0.35rem 0.4rem max(0.45rem, env(safe-area-inset-bottom));
+    padding: 0.28rem 0.35rem max(0.35rem, env(safe-area-inset-bottom));
     background: linear-gradient(
       180deg,
       transparent 0%,
@@ -2474,15 +2617,20 @@
     align-items: stretch !important;
   }
 
+  /* Full chrome height: top of selection tray through bottom of HUD tray */
   .nft-dock {
     justify-content: stretch;
     align-self: stretch;
+    width: 100%;
     height: 100% !important;
     min-height: 100%;
   }
 
   .nft-dock-btn {
-    border-radius: 12px;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    border-radius: 10px;
   }
 
   .bottom-chrome .nftImage,
@@ -2495,16 +2643,16 @@
     height: 100% !important;
     min-height: 100%;
     max-height: none;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
     border: 2px solid rgba(255, 255, 255, 0.9) !important;
     object-fit: cover;
     object-position: center center;
   }
 
   .nft-click-me {
-    bottom: 0.28rem;
-    font-size: 0.5rem;
-    padding: 0.14rem 0.38rem;
+    bottom: 0.2rem;
+    font-size: 0.45rem;
+    padding: 0.1rem 0.3rem;
   }
 
   .bottom-chrome .nftText,
@@ -2515,12 +2663,16 @@
     width: 100% !important;
     height: 100% !important;
     min-height: 100%;
-    border-radius: 12px !important;
+    border-radius: 10px !important;
   }
 
+  /* Selection strip + HUD tray share remaining width beside the full-height NFT */
   .chrome-main {
-    gap: 0.35rem;
+    gap: 0.25rem;
     min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
   }
 
   /* Mouse selection tray: hug content, horizontal gold scroll */
@@ -2535,23 +2687,26 @@
     width: max-content !important;
     max-width: 100% !important;
     height: var(--lg-panel-h) !important;
-    padding: 0.32rem 0.42rem 0.45rem !important;
+    padding: 0.22rem 0.32rem 0.3rem !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 14px !important;
+    border-radius: 12px !important;
     background: linear-gradient(180deg, rgba(18, 20, 28, 0.97), rgba(8, 9, 14, 0.99)) !important;
     opacity: 1 !important;
     overflow-x: auto !important;
     overflow-y: hidden !important;
+    overscroll-behavior-x: contain;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
     align-self: flex-start !important;
     justify-content: flex-start !important;
-    gap: 0.3rem !important;
+    gap: 0.22rem !important;
     box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
     scrollbar-width: thin;
     scrollbar-color: rgba(245, 197, 66, 0.85) rgba(255, 255, 255, 0.08);
   }
 
   .bottom-chrome .panel::-webkit-scrollbar {
-    height: 8px;
+    height: 6px;
   }
   .bottom-chrome .panel::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.08);
@@ -2567,33 +2722,40 @@
 
   .bottom-chrome .selectedImage {
     flex: 0 0 auto !important;
-    height: calc(var(--lg-panel-h) - 1.15rem) !important;
+    height: calc(var(--lg-panel-h) - 0.85rem) !important;
     width: auto !important;
-    min-width: calc(var(--lg-panel-h) - 1.15rem);
+    min-width: calc(var(--lg-panel-h) - 0.85rem);
     aspect-ratio: 1 !important;
-    border-radius: 10px !important;
+    border-radius: 8px !important;
     border: 2px solid transparent !important;
     object-fit: cover;
   }
 
-  /* See-through bottom HUD tray */
+  /*
+   * Compact mobile HUD:
+   *  [ pot chip  |  balances ]   ← balances sit above Hunt
+   *  [ pot chip  |  Hunt ×N  ]
+   * One short tray row-group instead of balances + pot stacking under Hunt.
+   */
   .bottom-chrome .tray {
     position: relative !important;
     bottom: auto !important;
     left: auto !important;
     top: auto !important;
-    grid-template-columns: 1fr auto;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
     grid-template-areas:
-      "stats play"
+      "pot stats"
       "pot play";
+    align-items: center;
     height: auto !important;
-    min-height: 3.9rem;
+    min-height: 0;
     width: 100% !important;
-    padding: 0.35rem 0.45rem 0.4rem !important;
+    padding: 0.22rem 0.35rem 0.25rem !important;
     border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-top: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
-    border-radius: 14px !important;
+    border-radius: 12px !important;
     background: linear-gradient(
       180deg,
       rgba(10, 12, 18, 0.26) 0%,
@@ -2601,29 +2763,70 @@
     ) !important;
     backdrop-filter: blur(6px);
     -webkit-backdrop-filter: blur(6px);
-    gap: 0.3rem 0.4rem;
+    gap: 0.18rem 0.35rem;
   }
 
   .bottom-chrome .dashboard {
     grid-area: pot;
     display: flex !important;
+    align-items: center;
+    align-self: stretch;
     width: auto !important;
     height: auto !important;
     min-width: 0;
   }
 
+  /* No pot chip yet — drop the empty left column, keep balances over Hunt */
+  .bottom-chrome .tray:not(:has(.pot-chip)) {
+    grid-template-columns: auto;
+    grid-template-areas:
+      "stats"
+      "play";
+    justify-content: end;
+  }
+  .bottom-chrome .tray:not(:has(.pot-chip)) .dashboard {
+    display: none !important;
+  }
+
+  .bottom-chrome .dashboard .pot-chip {
+    padding: 0.22rem 0.45rem;
+    border-radius: 10px;
+    gap: 0.06rem;
+    max-width: 100%;
+  }
+  .bottom-chrome .dashboard .pot-chip .smaller {
+    font-size: 0.55rem;
+    letter-spacing: 0.08em;
+  }
+  .bottom-chrome .dashboard .pot-chip .pot-value {
+    font-size: 0.78rem;
+    line-height: 1.15;
+  }
+  .bottom-chrome .dashboard .pot-chip-details {
+    margin-top: 0.1rem;
+    padding: 0.12rem 0.4rem;
+    font-size: 0.58rem;
+  }
+
+  /* Balances sit directly over the Hunt control */
   .bottom-chrome .scoreboard {
     grid-area: stats;
-    justify-content: flex-start !important;
+    justify-content: flex-end !important;
     width: auto !important;
     height: auto !important;
     margin: 0 !important;
-    font-size: 0.68rem !important;
-    gap: 0.25rem;
+    font-size: 0.62rem !important;
+    gap: 0.18rem;
+    flex-wrap: nowrap;
   }
 
   .bottom-chrome .scoreboard .stat {
-    padding: 0.18rem 0.4rem;
+    padding: 0.1rem 0.32rem;
+    gap: 0.18rem;
+  }
+
+  .bottom-chrome .scoreboard .stat-label {
+    font-size: 0.68em;
   }
 
   .bottom-chrome .button-board {
@@ -2631,7 +2834,8 @@
     width: auto !important;
     height: auto !important;
     justify-content: flex-end !important;
-    gap: 0.35rem;
+    align-items: center;
+    gap: 0.3rem;
   }
 
   .hunt-split {
@@ -2644,22 +2848,22 @@
     min-width: 6.2rem;
   }
   .hunt-split__toggle {
-    min-width: 2.65rem;
-    padding: 0.3rem 0.35rem;
+    min-width: 2.55rem;
+    padding: 0.28rem 0.32rem;
   }
   .hunt-split__toggle-label {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
   }
 
   .bottom-chrome .legend-button,
   .legend-button {
     max-width: 42vw !important;
-    min-width: 7.4rem;
-    min-height: 2.75rem !important;
+    min-width: 7.2rem;
+    min-height: 2.45rem !important;
     width: 100% !important;
     height: auto !important;
-    font-size: 0.95rem !important;
-    padding: 0.35rem 0.55rem !important;
+    font-size: 0.9rem !important;
+    padding: 0.28rem 0.5rem !important;
     margin: 0 !important;
     border-radius: 999px !important;
     text-align: center;
@@ -2669,10 +2873,13 @@
     max-width: none !important;
   }
 
+  .hunt-swap {
+    min-height: 1.45em;
+  }
   .hunt-swap__req {
     white-space: normal;
     text-align: center;
-    font-size: 0.55em;
+    font-size: 0.52em;
   }
 
   .notificationscancel,

@@ -49,17 +49,13 @@ export const wallets = [
 ];
 
 export const blockchain = {
-  // // mainnet (cashcat Chain) 
-  // name: 'Cashcat',
+  // // mainnet (Robinhood Chain) 
+  // name: 'Robinhood',
   // /** ERC20 token symbol (platform fee / mint token fee). */
-  // symbol: 'CCC',
-  // /**
-  //  * Native gas / pot / entry-fee ticker for this deployment.
-  //  * Swap per network (ETH on Sepolia/Base, S on Sonic, etc.) so UI never hardcodes it.
-  //  */
-  // nativeSymbol: 'CASHCAT',
+  // nativeSymbol: 'ETH',
+  // symbol: 'CASHCAT',
   // address: '0x64f90C1F258768a35f7661e293AA7e2976DC567b', // CASHCATS NFT
-  // chainId: 2274228, // Cashcat Network
+  // chainId: 4663, 
   // rpc: 'https://rpc.cashcatchain.cash',
   // blockExplorer: 'https://explorer.cashcatchain.cash/',
   // cashcat_contract_address: "0xf8Bdba72dC5b87DDF25625d0D5632635d5c4ED07", // ERC20
@@ -69,14 +65,9 @@ export const blockchain = {
   // // base_price_id: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
 
   // testnet — Ethereum Sepolia (contracts are deployed here)
-  name: 'Cashcat',
-  /** ERC20 token symbol (platform fee / mint token fee). */
-  symbol: 'CNY',
-  /**
-   * Native gas / pot / entry-fee ticker for this deployment.
-   * Swap per network (ETH on Sepolia/Base, S on Sonic, etc.) so UI never hardcodes it.
-   */
+  name: 'Sepolia',
   nativeSymbol: 'ETH',
+  symbol: 'CNY',
   address: '0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132', // CASHCATS NFT
   chainId: 11155111, // Ethereum Sepolia
   rpc: 'https://ethereum-sepolia-rpc.publicnode.com',
