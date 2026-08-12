@@ -66,21 +66,102 @@
 		"inputs": [
 			{
 				"indexed": true,
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
+				"indexed": true,
+				"internalType": "uint256",
+				"name": "commitBlock",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "nft",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint32",
+				"name": "plays",
+				"type": "uint32"
+			}
+		],
+		"name": "PlayCommitted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "commitBlock",
+				"type": "uint256"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint32",
+				"name": "plays",
+				"type": "uint32"
+			}
+		],
+		"name": "PlayExpired",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint64[]",
+				"name": "firstDraws",
+				"type": "uint64[]"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint64[]",
+				"name": "secondDraws",
+				"type": "uint64[]"
+			}
+		],
+		"name": "PlaySettled",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": true,
 				"internalType": "uint256",
 				"name": "nonce",
 				"type": "uint256"
 			},
 			{
 				"indexed": false,
-				"internalType": "uint8",
-				"name": "firstDraw",
-				"type": "uint8"
+				"internalType": "uint64[]",
+				"name": "firstDraws",
+				"type": "uint64[]"
 			},
 			{
 				"indexed": false,
-				"internalType": "uint8",
-				"name": "secondDraw",
-				"type": "uint8"
+				"internalType": "uint64[]",
+				"name": "secondDraws",
+				"type": "uint64[]"
 			}
 		],
 		"name": "RandomNumberResult",
@@ -255,6 +336,19 @@
 				"internalType": "string",
 				"name": "",
 				"type": "string"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "MAX_BATCH_PLAYS",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
 			}
 		],
 		"stateMutability": "view",
@@ -519,6 +613,24 @@
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "_nft",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint32",
+				"name": "plays",
+				"type": "uint32"
+			}
+		],
+		"name": "commitPlay",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "deadtax",
 		"outputs": [
@@ -780,6 +892,55 @@
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "player",
+				"type": "address"
+			}
+		],
+		"name": "getPendingPlay",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "commitBlock",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint32",
+				"name": "plays",
+				"type": "uint32"
+			},
+			{
+				"internalType": "uint256",
+				"name": "ethCostPerPlay",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "platformfee",
+				"type": "uint256"
+			},
+			{
+				"internalType": "bool",
+				"name": "canSettle",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "expired",
+				"type": "bool"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "lasttax",
 		"outputs": [
@@ -875,6 +1036,45 @@
 	{
 		"inputs": [
 			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "pendingPlays",
+		"outputs": [
+			{
+				"internalType": "uint256",
+				"name": "commitBlock",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "tokenId",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint32",
+				"name": "plays",
+				"type": "uint32"
+			},
+			{
+				"internalType": "uint256",
+				"name": "ethCostPerPlay",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "platformfee",
+				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
@@ -960,24 +1160,6 @@
 			}
 		],
 		"stateMutability": "view",
-		"type": "function"
-	},
-	{
-		"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "_nft",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes32",
-				"name": "userRandomNumber",
-				"type": "bytes32"
-			}
-		],
-		"name": "sendToCashcat",
-		"outputs": [],
-		"stateMutability": "payable",
 		"type": "function"
 	},
 	{
@@ -1096,6 +1278,11 @@
 			},
 			{
 				"internalType": "uint256",
+				"name": "_maxBatchPlays",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
 				"name": "_multiple",
 				"type": "uint256"
 			},
@@ -1111,6 +1298,13 @@
 			}
 		],
 		"name": "setValues",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "settlePlay",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"
