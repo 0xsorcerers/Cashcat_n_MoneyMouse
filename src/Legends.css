@@ -659,19 +659,23 @@
   letter-spacing: 0.01em;
   color: #1a1408 !important;
   text-align: center !important;
-  text-shadow: none !important;
-  /* default tint; inline style overrides background/border/boxShadow per speech */
+  /* Light shadow so text stays readable over see-through fill */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) !important;
+  /* default tint (slightly see-through); inline style overrides per speech */
   background: linear-gradient(
     165deg,
-    rgba(255, 252, 245, 0.98) 0%,
-    rgba(255, 240, 210, 0.96) 100%
+    rgba(255, 252, 245, 0.72) 0%,
+    rgba(255, 240, 210, 0.62) 100%
   );
-  border: 1.5px solid rgba(80, 50, 0, 0.2);
+  border: 1.5px solid rgba(80, 50, 0, 0.22);
   border-radius: 16px !important;
   box-shadow:
-    0 8px 22px rgba(0, 0, 0, 0.32),
-    0 0 0 1px rgba(255, 255, 255, 0.35) inset;
+    0 6px 18px rgba(0, 0, 0, 0.22),
+    0 0 0 1px rgba(255, 255, 255, 0.28) inset;
+  /* Keep element opacity full so text stays solid; transparency is in the fill */
   opacity: 1 !important;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
   z-index: 14 !important;
   pointer-events: auto;
   cursor: pointer;
@@ -1866,17 +1870,19 @@
   min-width: 3.1rem;
   padding: 0.35rem 0.45rem;
   border-radius: 0 999px 999px 0;
-  border: 2px solid rgba(80, 50, 0, 0.45);
-  border-left: 1px solid rgba(80, 50, 0, 0.35);
-  background: linear-gradient(180deg, #ffe27a 0%, #f5c542 45%, #c99214 100%);
-  color: #1a1200;
+  /* Lime-green multiplier — stands out from gold Hunt main */
+  border: 2px solid rgba(20, 90, 25, 0.45);
+  border-left: 1px solid rgba(20, 90, 25, 0.35);
+  background: linear-gradient(180deg, #b8ff4a 0%, #7cfc00 45%, #4ecb00 100%);
+  color: #0a1a00;
   font-family: var(--lg-font, inherit);
   font-weight: 800;
   cursor: pointer;
-  box-shadow: 0 6px 0 rgba(120, 80, 0, 0.35), 0 10px 22px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 6px 0 rgba(20, 90, 25, 0.35), 0 10px 22px rgba(0, 0, 0, 0.28);
 }
 .hunt-split__toggle:hover:not(:disabled) {
-  filter: brightness(1.05);
+  filter: brightness(1.06);
+  background: linear-gradient(180deg, #c8ff6a 0%, #8dff20 45%, #5ae000 100%);
 }
 .hunt-split__toggle:disabled {
   opacity: 0.45;
@@ -2643,10 +2649,13 @@
     font-size: clamp(0.88rem, 1.35vw, 1.1rem);
   }
 
+  /*
+   * Hunt pill — match the compact size used during call states
+   * ("Hunting…" / "Approving…"), not the oversized grid-swap shell.
+   */
   .hunt-split {
-    min-height: 2.85rem;
+    min-height: 2.7rem;
     border-radius: 999px;
-    /* Softer elevation so the pill stays visually inside the tray */
     box-shadow: 0 3px 0 rgba(120, 80, 0, 0.32), 0 6px 14px rgba(0, 0, 0, 0.28);
     overflow: visible;
   }
@@ -2659,15 +2668,16 @@
     border-right: none !important;
     box-shadow: none !important;
     width: auto !important;
-    min-width: 10.5rem;
+    min-width: 7.75rem;
     max-width: 100% !important;
-    flex: 1 1 auto;
-    min-height: 2.85rem !important;
+    flex: 0 1 auto;
+    min-height: 2.7rem !important;
     height: auto !important;
-    padding: 0.4rem 1rem 0.4rem 1.25rem !important;
+    padding: 0.36rem 0.95rem 0.36rem 1.1rem !important;
     display: inline-flex !important;
     align-items: center;
     justify-content: center;
+    font-size: clamp(1rem, 1.4vw, 1.18rem) !important;
   }
 
   /* Keep the pill glued — no solo hover lift on either half */
@@ -2689,55 +2699,56 @@
   }
 
   .hunt-split__toggle {
-    min-width: 3rem;
-    min-height: 2.85rem;
+    min-width: 2.8rem;
+    min-height: 2.7rem;
     height: 100%;
-    padding: 0.35rem 0.55rem;
+    padding: 0.3rem 0.5rem;
     border-radius: 0 999px 999px 0;
     border-left: 1px solid rgba(80, 50, 0, 0.32);
     box-shadow: none;
   }
 
   /*
-   * Hunt label swap — grid-stack both faces so the larger face sizes the button.
-   * Absolute faces used to collapse width until the fee face shows.
+   * Label swap: absolute faces (base behavior) so idle "Hunt!" stays
+   * the call-state size — fee face overlays without inflating the pill.
    */
   .hunt-swap {
-    display: grid;
-    grid-template: 1fr / 1fr;
-    place-items: center;
-    width: max-content;
-    min-width: 8.75rem;
-    max-width: 13rem;
-    min-height: 2.1em;
-    margin: 0 auto;
+    display: block;
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 1.5em;
+    margin: 0;
   }
   .hunt-swap__face {
-    grid-area: 1 / 1;
-    position: relative;
-    width: max-content;
-    max-width: 13rem;
-    padding: 0 0.15rem;
+    position: absolute;
+    inset: 0;
+    grid-area: auto;
+    width: 100%;
+    max-width: none;
+    padding: 0;
   }
   .hunt-swap__face.is-hidden {
     opacity: 0;
     visibility: hidden;
-    transform: scale(0.98);
+    transform: translateY(6px) scale(0.98);
     pointer-events: none;
   }
   .hunt-swap__face.is-shown {
     opacity: 1;
     visibility: visible;
-    transform: scale(1);
+    transform: translateY(0) scale(1);
   }
   .hunt-swap__title {
-    font-size: 1.15em;
+    font-size: 1.05em;
     white-space: nowrap;
   }
   .hunt-swap__req {
-    max-width: 13.5rem;
+    max-width: 100%;
     white-space: normal;
     text-align: center;
+    font-size: 0.55em;
   }
 }
 

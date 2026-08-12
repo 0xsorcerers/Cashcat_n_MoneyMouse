@@ -88,16 +88,16 @@ const formatLegendName = (key) => {
     .trim();
 };
 
-/** Comic-style speech chip tints (bg + border + soft glow) */
+/** Comic-style speech chip tints (translucent bg + border + soft glow) */
 const SPEECH_TINTS = [
-  { bg: "linear-gradient(165deg, rgba(255,252,245,0.98), rgba(255,236,190,0.96))", border: "rgba(200,140,40,0.45)", glow: "rgba(245,197,66,0.25)" },
-  { bg: "linear-gradient(165deg, rgba(255,245,250,0.98), rgba(255,210,225,0.96))", border: "rgba(220,80,120,0.4)", glow: "rgba(255,120,160,0.22)" },
-  { bg: "linear-gradient(165deg, rgba(240,250,255,0.98), rgba(190,230,255,0.96))", border: "rgba(40,130,200,0.4)", glow: "rgba(80,180,255,0.22)" },
-  { bg: "linear-gradient(165deg, rgba(240,255,245,0.98), rgba(190,245,210,0.96))", border: "rgba(40,160,90,0.4)", glow: "rgba(80,220,140,0.22)" },
-  { bg: "linear-gradient(165deg, rgba(248,242,255,0.98), rgba(220,200,255,0.96))", border: "rgba(120,80,200,0.4)", glow: "rgba(160,120,255,0.22)" },
-  { bg: "linear-gradient(165deg, rgba(255,248,240,0.98), rgba(255,220,180,0.96))", border: "rgba(220,120,40,0.4)", glow: "rgba(255,160,80,0.22)" },
-  { bg: "linear-gradient(165deg, rgba(255,250,255,0.98), rgba(255,210,245,0.96))", border: "rgba(200,60,160,0.4)", glow: "rgba(255,100,200,0.2)" },
-  { bg: "linear-gradient(165deg, rgba(240,255,255,0.98), rgba(180,245,245,0.96))", border: "rgba(20,160,160,0.4)", glow: "rgba(60,220,220,0.2)" },
+  { bg: "linear-gradient(165deg, rgba(255,252,245,0.72), rgba(255,236,190,0.62))", border: "rgba(200,140,40,0.4)", glow: "rgba(245,197,66,0.2)" },
+  { bg: "linear-gradient(165deg, rgba(255,245,250,0.72), rgba(255,210,225,0.62))", border: "rgba(220,80,120,0.35)", glow: "rgba(255,120,160,0.18)" },
+  { bg: "linear-gradient(165deg, rgba(240,250,255,0.72), rgba(190,230,255,0.62))", border: "rgba(40,130,200,0.35)", glow: "rgba(80,180,255,0.18)" },
+  { bg: "linear-gradient(165deg, rgba(240,255,245,0.72), rgba(190,245,210,0.62))", border: "rgba(40,160,90,0.35)", glow: "rgba(80,220,140,0.18)" },
+  { bg: "linear-gradient(165deg, rgba(248,242,255,0.72), rgba(220,200,255,0.62))", border: "rgba(120,80,200,0.35)", glow: "rgba(160,120,255,0.18)" },
+  { bg: "linear-gradient(165deg, rgba(255,248,240,0.72), rgba(255,220,180,0.62))", border: "rgba(220,120,40,0.35)", glow: "rgba(255,160,80,0.18)" },
+  { bg: "linear-gradient(165deg, rgba(255,250,255,0.72), rgba(255,210,245,0.62))", border: "rgba(200,60,160,0.35)", glow: "rgba(255,100,200,0.16)" },
+  { bg: "linear-gradient(165deg, rgba(240,255,255,0.72), rgba(180,245,245,0.62))", border: "rgba(20,160,160,0.35)", glow: "rgba(60,220,220,0.16)" },
 ];
 
 /**
@@ -142,7 +142,7 @@ const randomSpeechChipStyle = (lane, mobile) => {
     transform: `rotate(${rot}deg)`,
     background: tint.bg,
     borderColor: tint.border,
-    boxShadow: `0 8px 22px rgba(0,0,0,0.32), 0 0 18px ${tint.glow}, inset 0 0 0 1px rgba(255,255,255,0.35)`,
+    boxShadow: `0 6px 16px rgba(0,0,0,0.22), 0 0 14px ${tint.glow}, inset 0 0 0 1px rgba(255,255,255,0.28)`,
   };
 };
 
