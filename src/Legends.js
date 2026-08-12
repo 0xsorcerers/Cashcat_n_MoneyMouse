@@ -101,27 +101,31 @@ const SPEECH_TINTS = [
 ];
 
 /**
- * Random fixed position above a stage lane + random tint.
+ * Random comic speech placement + tint over the speaking portrait.
  * lane: 'hero' | 'choice'
+ * Mobile: chips sit on the figure (overlap), not above the wrong lane.
+ *   Hero  = index10  (~top 8vh / left 2vw)
+ *   Choice = index11 (~top 24vh / left 42vw)
  */
 const randomSpeechChipStyle = (lane, mobile) => {
   const tint = SPEECH_TINTS[randomShuffle(Math.max(SPEECH_TINTS.length - 1, 0))] || SPEECH_TINTS[0];
   let top;
   let left;
   if (lane === "hero") {
-    // Above left hero portrait
     if (mobile) {
-      top = 4 + Math.random() * 14; // 4–18vh
-      left = 2 + Math.random() * 28; // 2–30vw
+      // Over left hero body (index10 starts ~8vh / 2vw)
+      top = 10 + Math.random() * 16; // 10–26vh
+      left = 4 + Math.random() * 28; // 4–32vw
     } else {
       top = 2 + Math.random() * 18; // 2–20vh
       left = 1 + Math.random() * 22; // 1–23vw
     }
   } else {
-    // Above center/right choice portrait
+    // Choice / reply lane
     if (mobile) {
-      top = 10 + Math.random() * 16; // 10–26vh
-      left = 38 + Math.random() * 30; // 38–68vw
+      // Over right choice body (index11 starts ~24vh / 42vw) — always below hero band
+      top = 30 + Math.random() * 16; // 30–46vh
+      left = 44 + Math.random() * 28; // 44–72vw
     } else {
       top = 2 + Math.random() * 20; // 2–22vh
       left = 28 + Math.random() * 28; // 28–56vw
@@ -132,6 +136,8 @@ const randomSpeechChipStyle = (lane, mobile) => {
   return {
     top: `${top.toFixed(1)}vh`,
     left: `${left.toFixed(1)}vw`,
+    // CSS var so pop-in animation does not wipe the tilt
+    ["--speech-rot"]: `${rot}deg`,
     transform: `rotate(${rot}deg)`,
     background: tint.bg,
     borderColor: tint.border,
