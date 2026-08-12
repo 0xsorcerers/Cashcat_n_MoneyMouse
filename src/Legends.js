@@ -103,9 +103,8 @@ const SPEECH_TINTS = [
 /**
  * Random comic speech placement + tint over the speaking portrait.
  * lane: 'hero' | 'choice'
- * Mobile: chips sit on the figure (overlap), not above the wrong lane.
- *   Hero  = index10  (~top 8vh / left 2vw)
- *   Choice = index11 (~top 24vh / left 42vw)
+ * Mobile: chips sit on each figure (overlap their lane).
+ * Desktop: mid-torso only — clear of heroText / VS / name plates / match labels.
  */
 const randomSpeechChipStyle = (lane, mobile) => {
   const tint = SPEECH_TINTS[randomShuffle(Math.max(SPEECH_TINTS.length - 1, 0))] || SPEECH_TINTS[0];
@@ -117,8 +116,9 @@ const randomSpeechChipStyle = (lane, mobile) => {
       top = 10 + Math.random() * 16; // 10–26vh
       left = 4 + Math.random() * 28; // 4–32vw
     } else {
-      top = 2 + Math.random() * 18; // 2–20vh
-      left = 1 + Math.random() * 22; // 1–23vw
+      // Mid hero torso: below "YOUR HERO" (~8.5vh) + VS, above heroName (~64vh)
+      top = 20 + Math.random() * 18; // 20–38vh
+      left = 2 + Math.random() * 12; // 2–14vw (left of heroText ~16.5vw)
     }
   } else {
     // Choice / reply lane
@@ -127,8 +127,9 @@ const randomSpeechChipStyle = (lane, mobile) => {
       top = 30 + Math.random() * 16; // 30–46vh
       left = 44 + Math.random() * 28; // 44–72vw
     } else {
-      top = 2 + Math.random() * 20; // 2–22vh
-      left = 28 + Math.random() * 28; // 28–56vw
+      // Mid choice torso: clear of VS (~25vw) and villainName (~62vh / 31vw)
+      top = 20 + Math.random() * 18; // 20–38vh
+      left = 34 + Math.random() * 14; // 34–48vw (on choice, right of VS)
     }
   }
   // slight rotation for comic pop
@@ -2283,7 +2284,7 @@ const Legends = ({setComponent}) => {
         <div className="vs"><img src={require("./assets/images/vs.gif")} alt="vs" className="vsImage" /></div>
         <div className="heroText">YOUR HERO <br/>
           {nft > 0
-            ? <span className="waveanimator quote ledger">on Hunter {nft}</span>
+            ? <span className="waveanimator quote ledger">from Hunter {nft}</span>
             : <span className="waveanimator quote ledger">rouge hunt</span>}
         </div>
         {names.hero && names.hero !== "…" && (
