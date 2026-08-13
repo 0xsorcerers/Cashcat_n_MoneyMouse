@@ -65,6 +65,19 @@
 		"anonymous": false,
 		"inputs": [
 			{
+				"indexed": false,
+				"internalType": "bool",
+				"name": "paymentType",
+				"type": "bool"
+			}
+		],
+		"name": "PaymentTypeSet",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
 				"indexed": true,
 				"internalType": "address",
 				"name": "player",
@@ -735,19 +748,6 @@
 		"type": "function"
 	},
 	{
-		"inputs": [],
-		"name": "gameDAO",
-		"outputs": [
-			{
-				"internalType": "address",
-				"name": "",
-				"type": "address"
-			}
-		],
-		"stateMutability": "view",
-		"type": "function"
-	},
-	{
 		"inputs": [
 			{
 				"internalType": "address",
@@ -885,6 +885,11 @@
 			{
 				"internalType": "bool",
 				"name": "qualifiesForDiscount",
+				"type": "bool"
+			},
+			{
+				"internalType": "bool",
+				"name": "paymentType_",
 				"type": "bool"
 			}
 		],
@@ -1028,6 +1033,19 @@
 				"internalType": "uint256",
 				"name": "",
 				"type": "uint256"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "paymentType",
+		"outputs": [
+			{
+				"internalType": "bool",
+				"name": "",
+				"type": "bool"
 			}
 		],
 		"stateMutability": "view",
@@ -1240,6 +1258,19 @@
 			}
 		],
 		"name": "setFarmYield",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "bool",
+				"name": "_paymentType",
+				"type": "bool"
+			}
+		],
+		"name": "setPaymentType",
 		"outputs": [],
 		"stateMutability": "nonpayable",
 		"type": "function"

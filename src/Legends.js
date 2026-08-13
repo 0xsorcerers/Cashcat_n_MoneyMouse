@@ -162,6 +162,22 @@ const safeNum = (v, fallback = "0") => {
   return formatNumber(v);
 };
 
+/**
+ * Pot / payout unit from contract paymentType.
+ * false = native coin (blockchain.symbol), true = ERC20 pot (blockchain.tokenSymbol).
+ */
+const symbolForPaymentType = (paymentType) =>
+  paymentType === true ? blockchain.tokenSymbol : blockchain.symbol;
+
+/** Coerce chain bools (Result / bigint / 0|1) to a real boolean. */
+const asPaymentType = (v) => {
+  if (v === true || v === false) return v;
+  if (typeof v === "bigint") return v !== 0n;
+  if (typeof v === "number") return v !== 0;
+  if (typeof v === "string") return v === "true" || v === "1";
+  return Boolean(v);
+};
+
 // Media Screen Resolution
 const Desktop = ({ children }) => {
 const isDesktop = useMediaQuery({ minWidth: 769 });
@@ -369,7 +385,7 @@ const Legends = ({setComponent}) => {
   });
   /** Seasons hall of fame (pastwinners board). */
   const [showSeasonBoard, setShowSeasonBoard] = useState(false);
-  const [seasonBoard, setSeasonBoard] = useState([]); // { era, winner, amount, timestamp }[]
+  const [seasonBoard, setSeasonBoard] = useState([]); // { era, winner, amount, timestamp, paymentType, symbol }[]
   const [seasonBoardLoading, setSeasonBoardLoading] = useState(false);
   const [seasonBoardError, setSeasonBoardError] = useState(null);
   const [recentCost, setRecentCost] = useState(null);
@@ -487,7 +503,7 @@ const Legends = ({setComponent}) => {
   
   const balanceVerificationCheck = () => {
     if (walletBalance == null || Number(walletBalance) <= 0) {
-      setErrorMessage(`You need ${blockchain.nativeSymbol} to pay the entry fee`);
+      setErrorMessage(`You need ${blockchain.symbol} to pay the entry fee`);
       setErrorMessageVisible(true);
       noPlayFunds();
       setLoading(false);
@@ -812,13 +828,28 @@ const Legends = ({setComponent}) => {
         quotedForPlayer: playerAddr,
       };
 
+      // false = native pot (blockchain.symbol); true = token pot (blockchain.tokenSymbol)
+      let paymentTypeRaw = d.paymentType_ ?? d[25];
+      if (paymentTypeRaw === undefined || paymentTypeRaw === null) {
+        try {
+          paymentTypeRaw = await legendaryContract.paymentType();
+        } catch {
+          paymentTypeRaw = false;
+        }
+      }
+      data.paymentType = asPaymentType(paymentTypeRaw);
+
       setGameData(data);
       setDataReady(true);
       setDataError(null);
 
       const potEth = Number(safeFormatEther(data.pot));
       const potSafe = Number.isFinite(potEth) ? potEth : 0;
-      setPrizePot({ eth: potSafe.toFixed(4), era: data.currentEra });
+      setPrizePot({
+        eth: potSafe.toFixed(4),
+        era: data.currentEra,
+        paymentType: data.paymentType,
+      });
       setSeasonPot(potSafe.toFixed(4));
 
       if (
@@ -827,6 +858,16 @@ const Legends = ({setComponent}) => {
         data.lastWinner !== ethers.ZeroAddress
       ) {
         const winAmt = Number(safeFormatEther(data.lastWinAmount));
+        // Prefer payment type stored on past winner row when available
+        let winPaymentType = data.paymentType;
+        try {
+          const eraKey = data.lastWinEra || Math.max(1, data.currentEra - 1);
+          const w = await legendaryContract.pastwinners(eraKey);
+          const stored = w?.paymentType ?? w?.[4];
+          if (stored !== undefined && stored !== null) {
+            winPaymentType = asPaymentType(stored);
+          }
+        } catch (_) { /* older ABI / missing field */ }
         setLastWinner({
           address: data.lastWinner,
           pot: Number.isFinite(winAmt) ? winAmt : 0,
@@ -834,6 +875,8 @@ const Legends = ({setComponent}) => {
             ? new Date(data.lastWinTimestamp * 1000).toLocaleString()
             : "—",
           era: data.lastWinEra || Math.max(1, data.currentEra - 1),
+          paymentType: winPaymentType,
+          symbol: symbolForPaymentType(winPaymentType),
         });
       }
 
@@ -1377,8 +1420,60 @@ const Legends = ({setComponent}) => {
   };
 
   /**
+   * Timeline of paymentType changes from PaymentTypeSet events.
+   * Used when pastwinners rows lack a stored paymentType (pre-upgrade seasons).
+   * @returns {Promise<{ timestamp: number, paymentType: boolean }[]>}
+   */
+  const loadPaymentTypeTimeline = async () => {
+    const fallback = [
+      {
+        timestamp: 0,
+        paymentType: asPaymentType(gameData?.paymentType),
+      },
+    ];
+    try {
+      const filter = legendaryContract.filters.PaymentTypeSet?.();
+      if (!filter) return fallback;
+      const logs = await legendaryContract.queryFilter(filter);
+      if (!logs?.length) {
+        // No switches on-chain yet — default native (false) until first setPaymentType
+        return [{ timestamp: 0, paymentType: false }];
+      }
+      const timeline = [{ timestamp: 0, paymentType: false }];
+      for (const log of logs) {
+        const pt = asPaymentType(log.args?.paymentType ?? log.args?.[0]);
+        let ts = 0;
+        try {
+          const block = await log.getBlock();
+          ts = Number(block?.timestamp ?? 0) || 0;
+        } catch (_) {
+          ts = 0;
+        }
+        timeline.push({ timestamp: ts, paymentType: pt });
+      }
+      timeline.sort((a, b) => a.timestamp - b.timestamp);
+      return timeline;
+    } catch (err) {
+      console.warn("paymentType timeline unavailable:", err?.message || err);
+      return fallback;
+    }
+  };
+
+  /** paymentType active at unix timestamp (seconds), from timeline. */
+  const paymentTypeAtTimestamp = (timeline, ts) => {
+    let pt = false;
+    const t = Number(ts) || 0;
+    for (const row of timeline || []) {
+      if (row.timestamp <= t) pt = asPaymentType(row.paymentType);
+      else break;
+    }
+    return pt;
+  };
+
+  /**
    * Load past season winners from legends contract.pastwinners(era).
    * Completed seasons are 1 .. currentEra-1 (era increments on each pot win).
+   * Each row includes paymentType + symbol the winner was paid in.
    */
   const loadSeasonBoard = async () => {
     setSeasonBoardLoading(true);
@@ -1406,6 +1501,9 @@ const Legends = ({setComponent}) => {
       const eras = [];
       for (let e = current - 1; e >= 1; e--) eras.push(e);
 
+      const timeline = await loadPaymentTypeTimeline();
+      const currentPt = asPaymentType(gameData?.paymentType);
+
       // Cap remote calls for very long-running deployments
       const slice = eras.slice(0, 48);
       const rows = await Promise.all(
@@ -1418,11 +1516,25 @@ const Legends = ({setComponent}) => {
             const ts = Number(w?.timestamp ?? w?.[3] ?? 0) || 0;
             if (!winner || winner === ethers.ZeroAddress) return null;
             const amt = Number(safeFormatEther(amountWei));
+
+            // Prefer on-chain stored paymentType (new deployments); else event timeline; else current
+            let paymentType;
+            const stored = w?.paymentType ?? w?.[4];
+            if (stored !== undefined && stored !== null) {
+              paymentType = asPaymentType(stored);
+            } else if (ts > 0) {
+              paymentType = paymentTypeAtTimestamp(timeline, ts);
+            } else {
+              paymentType = currentPt;
+            }
+
             return {
               era: eraNum,
               winner,
               amount: Number.isFinite(amt) ? amt : 0,
               timestamp: ts ? new Date(ts * 1000).toLocaleString() : "—",
+              paymentType,
+              symbol: symbolForPaymentType(paymentType),
             };
           } catch (_) {
             return null;
@@ -1763,8 +1875,8 @@ const Legends = ({setComponent}) => {
       if (walletBalance != null && Number(walletBalance) < ethCostEth) {
         setErrorMessage(
           plays > 1
-            ? `Requires ${formatNumber(ethCostEth)} ${blockchain.nativeSymbol} for ${plays} hunts`
-            : `Requires ${formatNumber(ethCostEth)} ${blockchain.nativeSymbol} entry fee`
+            ? `Requires ${formatNumber(ethCostEth)} ${blockchain.symbol} for ${plays} hunts`
+            : `Requires ${formatNumber(ethCostEth)} ${blockchain.symbol} entry fee`
         );
         setErrorMessageVisible(true);
         noPlayFunds();
@@ -1781,9 +1893,9 @@ const Legends = ({setComponent}) => {
 
         if (playerTok < tokenCostWei) {
           setErrorMessage(
-            `Requires ${formatNumber(tokenCostEth)} ${blockchain.symbol} token fee` +
+            `Requires ${formatNumber(tokenCostEth)} ${blockchain.tokenSymbol} token fee` +
             (plays > 1 ? ` for ${plays} hunts` : "") +
-            (nftParam > 0 ? "" : " (non-NFT rate)")
+            (nftParam > 0 ? "" : " (for non-Cashcats owners)")
           );
           setErrorMessageVisible(true);
           noPlayFunds();
@@ -1799,9 +1911,9 @@ const Legends = ({setComponent}) => {
         );
 
         if (approvalAllowance < tokenCostWei) {
-          console.log(`Initiating $${blockchain.symbol} approval...`);
+          console.log(`Initiating $${blockchain.tokenSymbol} approval...`);
           setIsApproving(true);
-          setErrorMessage(`Requesting $${blockchain.symbol} Approval...`);
+          setErrorMessage(`Requesting $${blockchain.tokenSymbol} Approval...`);
           setErrorMessageVisible(true);
 
           const approveAmount = tokenCostWei;
@@ -1812,7 +1924,7 @@ const Legends = ({setComponent}) => {
           });
 
           const approveResult = await sendTransactionAsync(approveTransaction);
-          setErrorMessage(`Waiting for $${blockchain.symbol} approval to confirm…`);
+          setErrorMessage(`Waiting for $${blockchain.tokenSymbol} approval to confirm…`);
           setErrorMessageVisible(true);
           await waitForTxMined(approveResult, "Approve");
           approvalAllowance = await waitForAllowance(
@@ -1831,7 +1943,7 @@ const Legends = ({setComponent}) => {
             pendingPlaySeed.current = null;
             return;
           }
-          setErrorMessage(`$${blockchain.symbol} approved! Committing hunt…`);
+          setErrorMessage(`$${blockchain.tokenSymbol} approved! Committing hunt…`);
           setErrorMessageVisible(true);
         }
       }
@@ -1902,11 +2014,11 @@ const Legends = ({setComponent}) => {
       return "Game is paused. Try again later.";
     }
     if (/Insufficient fee/i.test(raw)) {
-      return `Not enough ${blockchain.nativeSymbol} sent for the entry fee.`;
+      return `Not enough ${blockchain.symbol} sent for the entry fee.`;
     }
     if (/Funds transfer failed/i.test(raw)) {
       return (
-        `On-chain ${blockchain.nativeSymbol} transfer failed during settle ` +
+        `On-chain ${blockchain.symbol} transfer failed during settle ` +
         `(often gas limit on large ×N hunts, or a tax/payout address rejecting ETH). ` +
         `Your commit should still be open — try Reveal again, or use a smaller multiplier. ` +
         `Redeploy the patched contract for safer batch settles.`
@@ -1916,10 +2028,10 @@ const Legends = ({setComponent}) => {
       return `Contract pot is short of the transfer amount. Contact the team if this persists.`;
     }
     if (/SafeERC20FailedOperation|ERC20Insufficient|transfer amount exceeds|insufficient allowance/i.test(raw)) {
-      return `Not enough $${blockchain.symbol} (or allowance) for the token fee. Approve again, then Hunt.`;
+      return `Not enough $${blockchain.tokenSymbol} (or allowance) for the token fee. Approve again, then Hunt.`;
     }
     if (/insufficient funds|exceeds the balance/i.test(raw)) {
-      return `Not enough ${blockchain.nativeSymbol} in your wallet for gas + entry fee.`;
+      return `Not enough ${blockchain.symbol} in your wallet for gas + entry fee.`;
     }
     if (/Timed out waiting for the next block/i.test(raw)) {
       return "Still waiting on the next block. Keep this dialog open and tap Reveal Hunt again.";
@@ -2137,6 +2249,8 @@ const Legends = ({setComponent}) => {
         gameData.lastWinner !== ethers.ZeroAddress
       ) {
         const pot = Number(safeFormatEther(gameData.lastWinAmount));
+        // Temporary: current pot unit until pastwinners fills stored paymentType
+        const pt = asPaymentType(gameData.paymentType);
         setLastWinner({
           address: gameData.lastWinner,
           pot: Number.isFinite(pot) ? pot : 0,
@@ -2144,13 +2258,35 @@ const Legends = ({setComponent}) => {
             ? new Date(gameData.lastWinTimestamp * 1000).toLocaleString()
             : "—",
           era: gameData.lastWinEra || Math.max(1, Number(prizePot.era) - 1),
+          paymentType: pt,
+          symbol: symbolForPaymentType(pt),
         });
         return true;
       }
       return false;
     };
 
-    if (hydrateFromGameData()) return;
+    if (hydrateFromGameData()) {
+      // Refine symbol from pastwinners row when available
+      let cancelled = false;
+      const prevEra =
+        gameData?.lastWinEra || Math.max(1, Number(prizePot.era) - 1);
+      (async () => {
+        try {
+          const w = await legendaryContract.pastwinners(prevEra);
+          if (cancelled) return;
+          const stored = w?.paymentType ?? w?.[4];
+          if (stored === undefined || stored === null) return;
+          const pt = asPaymentType(stored);
+          setLastWinner((prev) =>
+            prev?.address
+              ? { ...prev, paymentType: pt, symbol: symbolForPaymentType(pt) }
+              : prev
+          );
+        } catch (_) { /* ignore */ }
+      })();
+      return () => { cancelled = true; };
+    }
 
     // Fallback: read pastwinners(prevEra) directly when getGameData lacked a winner row
     let cancelled = false;
@@ -2163,11 +2299,18 @@ const Legends = ({setComponent}) => {
         if (!winner || winner === ethers.ZeroAddress) return;
         const pot = Number(safeFormatEther(w?.amount ?? w?.[2] ?? 0n));
         const ts = Number(w?.timestamp ?? w?.[3] ?? 0) || 0;
+        const stored = w?.paymentType ?? w?.[4];
+        const pt =
+          stored !== undefined && stored !== null
+            ? asPaymentType(stored)
+            : asPaymentType(gameData?.paymentType);
         setLastWinner({
           address: winner,
           pot: Number.isFinite(pot) ? pot : 0,
           timestamp: ts ? new Date(ts * 1000).toLocaleString() : "—",
           era: Number(w?.era ?? w?.[1] ?? prevEra) || prevEra,
+          paymentType: pt,
+          symbol: symbolForPaymentType(pt),
         });
       } catch (err) {
         console.warn("pastwinners fallback failed:", err?.message || err);
@@ -2202,6 +2345,12 @@ const Legends = ({setComponent}) => {
   const playDisabled = loading || dataLoading || !dataReady;
   const challengersShown = gameData?.challengers || DEFAULT_CHALLENGERS;
   const feePreview = getFeePreview();
+  /** Prize pot unit follows contract paymentType: false = native, true = token. */
+  const potSymbol = symbolForPaymentType(
+    prizePot?.paymentType !== undefined && prizePot?.paymentType !== null
+      ? prizePot.paymentType
+      : gameData?.paymentType
+  );
 
   // Hunt! button cycles every 5s between call-to-action and fee requirements
   const [showHuntReq, setShowHuntReq] = useState(false);
@@ -2282,7 +2431,9 @@ const Legends = ({setComponent}) => {
           style={{ cursor: 'pointer', pointerEvents: 'auto' }}
         />
         <div className="vs"><img src={require("./assets/images/vs.gif")} alt="vs" className="vsImage" /></div>
-        <div className="heroText">YOUR HERO <br/>
+        <div className="heroText">
+          <span className="heroText__title">YOUR HERO</span>
+          <br />
           {nft > 0
             ? <span className="waveanimator quote ledger">from Hunter {nft}</span>
             : <span className="waveanimator quote ledger">rouge hunt</span>}
@@ -2406,7 +2557,7 @@ const Legends = ({setComponent}) => {
               {dataReady && seasonPot != null && prizePot?.era != null && (
                 <div className="pot-chip" aria-label="Season pot">
                   <span className="smaller">Season {prizePot.era} pot</span>
-                  <span className="pot-value">{safeNum(seasonPot)} {blockchain.nativeSymbol}</span>
+                  <span className="pot-value">{safeNum(seasonPot)} {potSymbol}</span>
                   <button
                     type="button"
                     className="outcome-details-btn pot-chip-details"
@@ -2420,26 +2571,26 @@ const Legends = ({setComponent}) => {
             </div>
             <div className="scoreboard">
               <span className="stat">
-                <span className="stat-label">{blockchain.nativeSymbol}</span>
+                <span className="stat-label">{blockchain.symbol}</span>
                 {walletBalance != null
                   ? <span className="goldtext">{safeNum(walletBalance)}</span>
                   : <span className="goldtext">…</span>}
               </span>
               {tokenBalance?.Mil != null && tokenBalance.Mil > 0 && (
                 <span className="stat">
-                  <span className="stat-label">{blockchain.symbol}</span>
+                  <span className="stat-label">{blockchain.tokenSymbol}</span>
                   <span className="goldtext">{safeNum(tokenBalance.Mil)}M</span>
                 </span>
               )}
               {tokenBalance?.K != null && tokenBalance.K > 0 && (
                 <span className="stat">
-                  <span className="stat-label">{blockchain.symbol}</span>
+                  <span className="stat-label">{blockchain.tokenSymbol}</span>
                   <span className="goldtext">{safeNum(tokenBalance.K)}K</span>
                 </span>
               )}
               {tokenBalance?.Data != null && tokenBalance.Data > 0 && !(tokenBalance?.Mil > 0) && !(tokenBalance?.K > 0) && (
                 <span className="stat">
-                  <span className="stat-label">{blockchain.symbol}</span>
+                  <span className="stat-label">{blockchain.tokenSymbol}</span>
                   <span className="goldtext">{safeNum(tokenBalance.Data)}</span>
                 </span>
               )}
@@ -2456,8 +2607,8 @@ const Legends = ({setComponent}) => {
                       ? (dataLoading ? 'Loading game data…' : (dataError || 'Game data unavailable'))
                       : feePreview
                         ? (feePreview.ccc > 0
-                            ? `Requires ${safeNum(feePreview.eth)} ${blockchain.nativeSymbol} + ${safeNum(feePreview.ccc)} ${blockchain.symbol}${feePreview.plays > 1 ? ` for ${feePreview.plays} hunts` : ''}${feePreview.hasNft ? ' (NFT rate)' : ''}`
-                            : `Requires ${safeNum(feePreview.eth)} ${blockchain.nativeSymbol}${feePreview.plays > 1 ? ` for ${feePreview.plays} hunts` : ''}${feePreview.hasNft ? ' (NFT rate)' : ''}`)
+                            ? `Requires ${safeNum(feePreview.eth)} ${blockchain.symbol} + ${safeNum(feePreview.ccc)} ${blockchain.tokenSymbol}${feePreview.plays > 1 ? ` for ${feePreview.plays} hunts` : ''}${feePreview.hasNft ? ' (NFT holder)' : ''}`
+                            : `Requires ${safeNum(feePreview.eth)} ${blockchain.symbol}${feePreview.plays > 1 ? ` for ${feePreview.plays} hunts` : ''}${feePreview.hasNft ? ' (NFT holder)' : ''}`)
                         : 'Hunt!'
                   }
                 >
@@ -2476,8 +2627,8 @@ const Legends = ({setComponent}) => {
                         <span className={`hunt-swap__face ${showHuntReq ? 'is-shown' : 'is-hidden'}`}>
                           <span className="hunt-swap__req">
                             {feePreview.plays > 1 ? `${feePreview.plays}× ` : ''}
-                            Requires {safeNum(feePreview.eth)} {blockchain.nativeSymbol}
-                            {feePreview.ccc > 0 ? ` + ${safeNum(feePreview.ccc)} ${blockchain.symbol}` : ''}
+                            Requires {safeNum(feePreview.eth)} {blockchain.symbol}
+                            {feePreview.ccc > 0 ? ` + ${safeNum(feePreview.ccc)} ${blockchain.tokenSymbol}` : ''}
                           </span>
                         </span>
                       )}
@@ -2639,7 +2790,7 @@ const Legends = ({setComponent}) => {
         <div className={`literary-content-hero ${animations.literaryHero ? 'animate-in' : ''}`}>
           <img src={require('./assets/images/diya.gif')} className="candle" />
           <span className="waveanimator quote literary-content-title">Rules Of Play</span>
-          <span className="literary-content-phonetic larger">The rules are simple. {isMobile ? ''  :  <br />}Successfully <span style={{color: 'gold'}}>hunt</span> your bounty to win the prize pot. {isMobile ? ''  :  <br />}Your odds are favorable: a wholesome <span style={{color: 'gold'}}>match</span> (only 1 in 18) and you win this season's {blockchain.nativeSymbol} pot.</span>
+          <span className="literary-content-phonetic larger">The rules are simple. {isMobile ? ''  :  <br />}Successfully <span style={{color: 'gold'}}>hunt</span> your bounty to win the prize pot. {isMobile ? ''  :  <br />}Your odds are favorable: a wholesome <span style={{color: 'gold'}}>match</span> (only 1 in 18) and you win this season's {potSymbol} pot.</span>
           <span className="literary-content-text">Play and earn multiple promotional token rewards while you hunt.</span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, hero: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
@@ -2649,8 +2800,8 @@ const Legends = ({setComponent}) => {
         <div className={`literary-content-villain ${animations.literaryVillain ? 'animate-in' : ''} villany`}>
           <img src={require('./assets/images/candle-bowl.gif')} className="candle" />
           <span className="waveanimator forest literary-content-title">Choose Your Destiny!</span>
-          <span className="literary-content-phonetic larger">To be or not to be? Every hunt feeds the {blockchain.nativeSymbol} pot. You are only one <span style={{color: 'gold'}}>good hunt</span> away from this season's <>{dataReady && prizePot?.eth != null && <span style={{color: 'gold'}}> {safeNum(prizePot.eth)} {blockchain.nativeSymbol}</span>}</> prize. </span>
-          <span className="literary-content-text">Cash Cat NFT owners pay a base fee in both {blockchain.nativeSymbol} + ${blockchain.symbol} fees. Non-holders face steeper odds and taxed more.<br/> Helps to spawn a Cash Cat.</span>
+          <span className="literary-content-phonetic larger">To be or not to be? Every hunt feeds the {potSymbol} pot. You are only one <span style={{color: 'gold'}}>good hunt</span> away from this season's <>{dataReady && prizePot?.eth != null && <span style={{color: 'gold'}}> {safeNum(prizePot.eth)} {potSymbol}</span>}</> prize. </span>
+          <span className="literary-content-text">Cash Cat NFT owners pay a base fee in both {blockchain.symbol} + ${blockchain.tokenSymbol} fees. Non-holders face steeper odds and taxed more.<br/> Helps to spawn a Cash Cat.</span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, villain: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
       </div>
@@ -2660,7 +2811,7 @@ const Legends = ({setComponent}) => {
           <img src={require('./assets/images/scented-candle.gif')} className="candle" />
           <span className="waveanimator regal literary-content-title">How To Play</span>
           <span className="literary-content-phonetic larger">Click any <span style={{color: 'teal'}}>vestige of rodentry</span> below as your pick, then hit Hunt. The contract draws two numbers, all verifiable on-chain.</span>
-          <span className="literary-content-text">If both draws match, you take the {blockchain.nativeSymbol} pot. {isMobile ? ''  :  <br />}Miss, and your {blockchain.nativeSymbol} hunting fee grows the prize for the next cat. <span style={{color: 'gold'}}><BsEmojiHeartEyesFill /></span></span>
+          <span className="literary-content-text">If both draws match, you take the {potSymbol} pot. {isMobile ? ''  :  <br />}Miss, and your hunting fee grows the prize for the next cat. <span style={{color: 'gold'}}><BsEmojiHeartEyesFill /></span></span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, patron: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
       </div> 
@@ -2669,7 +2820,7 @@ const Legends = ({setComponent}) => {
         <div className={`literary-content-artifact tadhigh ${animations.literaryArtifact ? 'animate-in' : ''}`}>
           <img src={require('./assets/images/oil-lamp.gif')} className="candle" />
           <span className="waveanimator liberty literary-content-title">Low Risk - High Reward play</span>
-          <span className="literary-content-phonetic larger">Pay a small <span style={{color: 'gold'}}>{blockchain.nativeSymbol}</span> entry fee (feeds the pot) plus a <span style={{color: 'gold'}}>${blockchain.symbol}</span> token fee each play. {isMobile ? ''  :  <br />} Miss and your {blockchain.nativeSymbol} stays in the pot for the <span style={{color: 'gold'}}>next attempt</span>.</span>
+          <span className="literary-content-phonetic larger">Pay a small <span style={{color: 'gold'}}>{blockchain.symbol}</span> entry fee plus a <span style={{color: 'gold'}}>${blockchain.tokenSymbol}</span> token fee each play. {isMobile ? ''  :  <br />} Miss and your fee stays in the {potSymbol} pot for the <span style={{color: 'gold'}}>next attempt</span>.</span>
           <span className="literary-content-text">If you own a Cash Cat, you gain a significant discount on the platform fee on your winnings. Currently sitting at {feeType !== null ? feeType : 0}% discount {feeType == 0 && "\(because you own none)."}</span>
           <MdToggleOn onClick={() => setDisplayOff({ ...displayOff, artifact: 'none' })} style={{cursor: 'pointer'}}/>
         </div>
@@ -2716,7 +2867,10 @@ const Legends = ({setComponent}) => {
                   {lastWinner.pot != null && (
                     <>
                       {" — "}
-                      <span className="outcome-hl">{safeNum(lastWinner.pot)} {blockchain.nativeSymbol}</span>
+                      <span className="outcome-hl">
+                        {safeNum(lastWinner.pot)}{" "}
+                        {lastWinner.symbol || potSymbol}
+                      </span>
                     </>
                   )}
                   {lastWinner.timestamp && lastWinner.timestamp !== "—" ? (
@@ -2733,7 +2887,7 @@ const Legends = ({setComponent}) => {
                 {seasonPot != null && (
                   <>
                     {" — pot sits at "}
-                    <span className="outcome-eth">{safeNum(seasonPot)} {blockchain.nativeSymbol}</span>
+                    <span className="outcome-eth">{safeNum(seasonPot)} {potSymbol}</span>
                   </>
                 )}
                 .
@@ -2794,7 +2948,7 @@ const Legends = ({setComponent}) => {
                   </>
                 ) : (
                   <>
-                    Hunt is complete. Reveal your bounty to pull up
+                    Hunt is complete. Reveal your bounty (at $0 cost) to pull up
                     results. If you leave without revealing your bounty before this window expires,
                     any proceeds from your hunt are lost forever (forfeited to the prize pot).
                   </>
@@ -2934,7 +3088,7 @@ const Legends = ({setComponent}) => {
                             Your funds are already being sent to your account
                             {" — "}
                             <span className="outcome-eth">
-                              {safeNum(huntResults.amountWon)} {blockchain.nativeSymbol}
+                              {safeNum(huntResults.amountWon)} {potSymbol}
                             </span>
                             {" → "}
                             <strong>{truncateAddress(account?.address)}</strong>.
@@ -3014,7 +3168,7 @@ const Legends = ({setComponent}) => {
               {!huntResults.potWon && (
                 <div style={{ marginTop: "0.55rem" }}>
                   Your{" "}
-                  <span className="outcome-hl">{blockchain.nativeSymbol}</span> fee
+                  <span className="outcome-hl">{potSymbol}</span> fee
                   {huntResults.rows.length > 1 ? "s have" : " has"} joined the season
                   pot. Hunt again!
                 </div>
@@ -3069,7 +3223,7 @@ const Legends = ({setComponent}) => {
              <span className="outcome-badge">Hall of fame</span>
              <h2 className="outcome-title">Season winners</h2>
              <p className="season-board-lead">
-               Legends who claimed the pot. Your name could be next.
+               Legends who claimed the pot — and the unit they were paid in. Your name could be next.
              </p>
              {seasonBoardLoading && (
                <div className="season-board-status">Loading past seasons…</div>
@@ -3092,6 +3246,7 @@ const Legends = ({setComponent}) => {
                        <th>Season</th>
                        <th>Winner</th>
                        <th>Pot</th>
+                       <th>Paid in</th>
                        <th>When</th>
                      </tr>
                    </thead>
@@ -3103,7 +3258,10 @@ const Legends = ({setComponent}) => {
                            {truncateAddress(row.winner)}
                          </td>
                          <td className="season-board-pot">
-                           {safeNum(row.amount)} {blockchain.nativeSymbol}
+                           {safeNum(row.amount)} {row.symbol || potSymbol}
+                         </td>
+                         <td className="season-board-paid" title={row.paymentType ? "Token pot" : "Native pot"}>
+                           {row.symbol || potSymbol}
                          </td>
                          <td className="season-board-when">{row.timestamp}</td>
                        </tr>

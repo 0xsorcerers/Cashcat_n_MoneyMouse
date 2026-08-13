@@ -14,15 +14,14 @@ interface ICashcat {
     function blacklisted(uint256 _index) external view returns (bool);
 }
 
-interface IFarm {
-    function balanceOf(address _sender) external view returns (uint256);
-}
-
-/// @notice Gaming contract: players pay a native-coin entry fee (pot) plus a token fee.
+/// @notice Gaming contract: players pay a native-coin entry fee plus a token fee.
 ///         Play is a two-step commit/reveal so outcomes cannot be simulated in the same tx
 ///         as the entry (anti-bot) and smart-contract wallets are allowed.
-///         Two random numbers are drawn per loop; if they match, the winner takes the native
-///         pot (minus reseed + platform fee). NFT holders pay base fees; non-holders a multiple.
+///         Two random numbers are drawn per loop; if they match, the winner takes the pot
+///         (minus reseed + platform fee). Pot source and payout follow `paymentType`:
+///         false (default) = native coin (`address(this).balance`);
+///         true = payment token (`AllowedCrypto[payId].balanceOf(this)`).
+///         NFT holders pay base fees; non-holders a multiple.
 contract CashCat_n_MoneyMouse is ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -61,6 +60,8 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
     event PlayExpired(address indexed player, uint256 commitBlock, uint32 plays);
     event Pause();
     event Unpause();
+    /// @notice DAO flipped winner payout + pot source. false = native, true = payment token.
+    event PaymentTypeSet(bool paymentType);
 
     address public cashcat;
     address private gameDAO;
@@ -86,8 +87,8 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
     uint256 public deadtax = 0;
     uint256 public bobbtax = 0;
     uint256 public staketax = 0;
-    uint256 public lasttax = 0;
-    uint256 public devtax = 0;
+    uint256 public lasttax = 30;
+    uint256 public devtax = 20;
 
     // Native-coin (ETH) fee tax rates — parallel structure to token taxes
     uint256 public burneth = 20;
@@ -110,6 +111,8 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
     uint256 public TotalAmountWon = 0;
     string public Author = "0xsorcerers";
     bool public paused = false;
+    /// @notice false (default) = pot/payout is native coin; true = pot/payout is AllowedCrypto[payId].
+    bool public paymentType = false;
 
     /// @dev Nonce for added randomness entropy
     uint256 private nonce = 0;
@@ -210,6 +213,7 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
      *  - ethCostHolder / ethCostNonHolder / tokenCostHolder / tokenCostNonHolder (tier table)
      *  - lastWinner, lastWinEra, lastWinAmount, lastWinTimestamp
      *  - ethCost, tokenCost, platformfee, powerBonus, qualifiesForDiscount (this player)
+     *  - paymentType_ (false = native pot, true = token pot)
      */
     function getGameData(address player, uint256 _nft)
         external
@@ -239,11 +243,12 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
             uint256 tokenCost,
             uint256 platformfee,
             uint256 powerBonus,
-            bool qualifiesForDiscount
+            bool qualifiesForDiscount,
+            bool paymentType_
         )
     {
         // —— global snapshot ——
-        pot = address(this).balance;
+        pot = _currentPot();
         currentEra = era;
         requiredFee_ = requiredFee;
         tokenFee_ = tokenFee;
@@ -281,6 +286,8 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
             powerBonus = 0;
             qualifiesForDiscount = false;
         }
+
+        paymentType_ = paymentType;
     }
 
     /// @dev Fee quote for a resolved token id (0 = non-holder path).
@@ -327,6 +334,33 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
         require(_to != address(0), "Zero address");
         (bool success, ) = payable(_to).call{value: _value}("");
         require(success, "Funds transfer failed.");
+    }
+
+    /// @dev Active pot: native coin when paymentType is false, payment token when true.
+    function _currentPot() internal view returns (uint256) {
+        if (!paymentType) {
+            return address(this).balance;
+        }
+        if (AllowedCrypto.length == 0 || payId >= AllowedCrypto.length) {
+            return 0;
+        }
+
+        TokenInfo storage tokens = AllowedCrypto[payId];
+        IERC20 paytoken = tokens.paytoken;
+        return paytoken.balanceOf(address(this));
+    }
+
+    /// @dev Pay `_value` from the active pot (native coin or AllowedCrypto[payId]).
+    function _payFromPot(address _to, uint256 _value) internal {
+        if (_value == 0) return;
+        if (!paymentType) {
+            _safeTransferETH(_to, _value);
+            return;
+        }
+        require(AllowedCrypto.length > 0 && payId < AllowedCrypto.length, "No payment token");
+        TokenInfo storage tokens = AllowedCrypto[payId];
+        IERC20 paytoken = tokens.paytoken;
+        paytoken.safeTransfer(_to, _value);
     }
 
     receive() external payable {}
@@ -494,9 +528,10 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
         }
     }
 
-    /// @dev Pay the native pot to the winner after reseed + platform fee.
+    /// @dev Pay the active pot to the winner after reseed + platform fee.
+    ///      Native coin when paymentType is false; AllowedCrypto[payId] when true.
     function _processWin(address winner, uint256 platformfee) internal {
-        uint256 balance = address(this).balance;
+        uint256 balance = _currentPot();
 
         if (balance > 0) {
             uint256 seed = (balance * reseed) / 100;
@@ -504,8 +539,8 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
             uint256 winfee = (amountWon * platformfee) / 100;
             uint256 amountPayable = amountWon - winfee;
 
-            _safeTransferETH(winner, amountPayable);
-            _safeTransferETH(developmentAddress, winfee);
+            _payFromPot(winner, amountPayable);
+            _payFromPot(developmentAddress, winfee);
 
             uint256 currentEra = era;
             pastwinners[currentEra].era = currentEra;
@@ -537,7 +572,7 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
                 uint256 indexFarm = permittedFarms[f];
                 address currentFarm = AllowedFarms[indexFarm];
                 IERC20 farmtoken = IERC20(currentFarm);
-                uint256 farmbal = IFarm(currentFarm).balanceOf(address(this));
+                uint256 farmbal = farmtoken.balanceOf(address(this));
                 uint256 farm = AllowedAmounts[indexFarm];
                 if (farmbal > farm && farm > 0) {
                     farmtoken.safeTransfer(lastAddress, farm);
@@ -633,6 +668,9 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
         // uint64 draw width allows large challenger pools (old uint8 capped at 255)
         require(_challengers > 0 && _challengers <= type(uint64).max, "Invalid challengers");
         require(_reseed <= 100 && _platformFee <= 100 && _multiple >= 1 && _tokenMultiple >= 1 && _maxBatchPlays > 0 , "Invalid entries");
+        if (paymentType) {
+            require(AllowedCrypto.length > 0 && _payId < AllowedCrypto.length, "No payment token");
+        }
 
         challengers = _challengers;
         payId = _payId;
@@ -727,8 +765,26 @@ contract CashCat_n_MoneyMouse is ReentrancyGuard {
         gameDAO = _gameDAO;
     }
 
-    /// @notice Current native pot available for the next winner.
+    /// @notice Switch winner payout + displayed pot. false = native coin, true = payment token.
+    function setPaymentType(bool _paymentType) external onlyGameDAO {
+        if (_paymentType) {
+            require(AllowedCrypto.length > 0 && payId < AllowedCrypto.length, "No payment token");
+        }
+        paymentType = _paymentType;
+
+        //reset tax values
+        if (paymentType) {
+            burntoll = 100; deadtax = 0; bobbtax = 0; staketax = 0; lasttax = 30; devtax = 20; 
+            burneth = 20; ethdeadtax = 0; ethbobbtax = 0; ethstaketax = 0; ethlasttax = 10; ethdevtax = 10;
+        } else {
+            burntoll = 20; deadtax = 50; bobbtax = 0; staketax = 0; lasttax = 30; devtax = 20; 
+            burneth = 100; ethdeadtax = 0; ethbobbtax = 0; ethstaketax = 0; ethlasttax = 50; ethdevtax = 50;
+        }
+        emit PaymentTypeSet(_paymentType);
+    }
+
+    /// @notice Current pot available for the next winner (native or payment token).
     function potBalance() external view returns (uint256) {
-        return address(this).balance;
+        return _currentPot();
     }
 }

@@ -51,9 +51,10 @@ export const wallets = [
 export const blockchain = {
   // mainnet (Robinhood Chain) 
   name: 'Robinhood',
-  /** ERC20 token symbol (platform fee / mint token fee). */
-  nativeSymbol: 'ETH',
-  symbol: 'CASHCAT',
+  /** Native coin symbol (entry fee / native pot). */
+  symbol: 'ETH',
+  /** ERC20 token symbol (token fee / token pot). */
+  tokenSymbol: 'CASHCAT',
   address: '0x64f90C1F258768a35f7661e293AA7e2976DC567b', // CASHCATS NFT
   chainId: 4663, 
   rpc: 'https://rpc.mainnet.chain.robinhood.com',
@@ -61,13 +62,13 @@ export const blockchain = {
   cashcat_contract_address: "0x020bfC650A365f8BB26819deAAbF3E21291018b4", // ERC20
   decimals: 18,
   pyth_contract_address: "0xDd24F84d36BF92C65F92307595335bdFab5Bbd21", // Pyth on Sepolia (legacy; game no longer needs entropy fee)
-  legend_contract_address: "0x9edA086c7c9f86654Eb79b668d8C23D15220F494", // CashCat_n_MoneyMouse
+  legend_contract_address: "0x21e33d9480D82D055aD2B2d721CDdbCe389A8861", // CashCat_n_MoneyMouse
   // base_price_id: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
 
   // // testnet — Ethereum Sepolia (contracts are deployed here)
   // name: 'Sepolia',
-  // nativeSymbol: 'ETH',
-  // symbol: 'CNY',
+  // symbol: 'ETH',
+  // tokenSymbol: 'CNY',
   // address: '0x6f2A200D859a1E4DF8FfB28eBc6F45F4b0341132', // CASHCATS NFT
   // chainId: 11155111, // Ethereum Sepolia
   // rpc: 'https://ethereum-sepolia-rpc.publicnode.com',
@@ -75,7 +76,7 @@ export const blockchain = {
   // cashcat_contract_address: "0x8bb94d9345EB47e8b5f4555c7724124043D0931a", // ERC20
   // decimals: 18,
   // pyth_contract_address: "0xDd24F84d36BF92C65F92307595335bdFab5Bbd21", // Pyth on Sepolia (legacy; game no longer needs entropy fee)
-  // legend_contract_address: "0xf6a1f810D841Ac756b692CB45c8Cb51BB8f2aC0c", // CashCat_n_MoneyMouse
+  // legend_contract_address: "0x2B24945e7c09F1Bcaad7Cc65f438ea85f28C03AC", // CashCat_n_MoneyMouse
   // // base_price_id: "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
 };
 
@@ -92,8 +93,8 @@ export const base = defineChain({
   name: blockchain.name,
   rpc: blockchain.rpc,
   nativeCurrency: {
-    name: blockchain.nativeSymbol,
-    symbol: blockchain.nativeSymbol,
+    name: blockchain.symbol,
+    symbol: blockchain.symbol,
     decimals: 18,
   },
   blockExplorers: blockchain.blockExplorer
@@ -194,7 +195,7 @@ export function Connector () {
           [blockchain.chainId]: [{
             address: blockchain.cashcat_contract_address,
             name: blockchain.name,
-            symbol: blockchain.symbol,
+            symbol: blockchain.tokenSymbol,
             icon: '/logo.png',
           },
           // {

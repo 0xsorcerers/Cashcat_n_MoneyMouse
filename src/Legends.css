@@ -516,6 +516,8 @@
   font-family: "Cakecafe";
   font-size: x-large;
   z-index: 15;
+  /* Slight see-through so stage art still reads underneath */
+  opacity: 0.85;
 }
 
 /* Fate labels — high-contrast gold (black was unreadable on busy art) */
@@ -968,7 +970,10 @@
   }
   .prizewinner {
     height: auto;
-    width: 100vw;
+    width: 100%;
+    max-width: 100vw;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
   /*
    * Mobile stage — proportional portraits; match is slightly larger (result primacy).
@@ -2068,14 +2073,17 @@
 .outcome-card {
   position: relative;
   width: min(92vw, 440px);
+  max-width: 100%;
   max-height: min(86vh, 640px);
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 0.65rem;
   padding: clamp(1.25rem, 3vw, 2rem);
+  box-sizing: border-box;
   border-radius: 22px;
   border: 1px solid rgba(255, 214, 120, 0.35);
   background-color: rgba(10, 12, 18, 0.94);
@@ -2155,6 +2163,7 @@
 .outcome-card.outcome-reveal {
   cursor: default;
   max-height: min(86vh, 640px);
+  overflow-x: hidden;
   overflow-y: auto;
 }
 .outcome-card.outcome-reveal .outcome-badge {
@@ -2172,6 +2181,9 @@
   flex-direction: column;
   gap: 0.4rem;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   text-align: left;
   padding: 0.65rem 0.75rem;
   border-radius: 12px;
@@ -2183,8 +2195,11 @@
   align-items: baseline;
   justify-content: space-between;
   gap: 0.75rem;
+  min-width: 0;
+  max-width: 100%;
 }
 .reveal-meta-label {
+  flex: 0 0 auto;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -2192,9 +2207,13 @@
   color: var(--lg-muted);
 }
 .reveal-meta-value {
+  flex: 1 1 auto;
+  min-width: 0;
   font-weight: 800;
   color: var(--lg-cream);
   text-align: right;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .reveal-meta-row--timer .reveal-timer {
   font-family: var(--lg-font), monospace;
@@ -2202,6 +2221,8 @@
   font-size: 1.15rem;
   color: var(--lg-gold);
   text-align: right;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .reveal-timer-sub {
   display: block;
@@ -2216,10 +2237,13 @@
   margin: 0.65rem 0 0;
   font-size: 0.88rem;
   color: var(--lg-muted);
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .reveal-wait-note code {
   font-size: 0.85em;
   color: var(--lg-gold);
+  word-break: break-all;
 }
 
 /* Multi-entry settle results */
@@ -2494,6 +2518,13 @@
   white-space: nowrap;
 }
 
+.season-board-paid {
+  color: var(--lg-gold, #f5c542) !important;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .season-board-when {
   color: var(--lg-muted) !important;
   font-size: 0.75rem;
@@ -2501,8 +2532,8 @@
 }
 
 @media only screen and (max-width: 768px) {
-  .season-board-table thead th:nth-child(4),
-  .season-board-table tbody td:nth-child(4) {
+  .season-board-table thead th:nth-child(5),
+  .season-board-table tbody td:nth-child(5) {
     display: none; /* drop timestamp column on narrow screens */
   }
 
@@ -2565,9 +2596,15 @@
   .heroText {
     top: 10.5vh;
     left: 16.5vw;
-    max-width: 14vw;
-    line-height: 1.2;
+    /* Room for "YOUR HERO" on one unbroken line (14vw was too tight for Cakecafe) */
+    max-width: min(40vw, 20rem);
+    width: max-content;
+    line-height: 1.25;
     z-index: 16;
+  }
+  .heroText__title {
+    display: inline-block;
+    white-space: nowrap;
   }
 
   .heroName {
@@ -3061,6 +3098,133 @@
 
   .outcome-card {
     width: min(94vw, 400px);
+    max-width: calc(100vw - 1rem);
     padding: 1.1rem 1rem 1.25rem;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  /*
+   * Reveal dialog — full mobile fit: no horizontal scroll,
+   * content compact enough to show on one screen.
+   */
+  .prizewinner.outcome-reveal,
+  .prizewinner.outcome-reveal.outcome-overlay {
+    width: 100% !important;
+    max-width: 100vw !important;
+    height: 100% !important;
+    max-height: 100dvh !important;
+    padding: max(0.4rem, env(safe-area-inset-top, 0px)) 0.45rem max(0.45rem, env(safe-area-inset-bottom, 0px)) !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .outcome-card.outcome-reveal {
+    width: 100% !important;
+    max-width: min(100%, calc(100vw - 0.9rem)) !important;
+    max-height: min(92dvh, calc(100dvh - 0.9rem));
+    margin: 0 auto;
+    padding: 0.85rem 0.75rem 0.95rem !important;
+    gap: 0.4rem;
+    font-size: 0.84rem;
+    line-height: 1.35;
+    overflow-x: hidden !important;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .outcome-card.outcome-reveal .outcome-badge {
+    font-size: 0.62rem;
+    padding: 0.2rem 0.55rem;
+    letter-spacing: 0.1em;
+  }
+
+  .outcome-card.outcome-reveal .outcome-title {
+    font-size: clamp(1rem, 4.6vw, 1.2rem) !important;
+    margin: 0 0 0.1rem;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .outcome-card.outcome-reveal .outcome-body {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .outcome-card.outcome-reveal .outcome-body p {
+    margin: 0 0 0.35rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .outcome-card.outcome-reveal .reveal-meta {
+    margin-top: 0.45rem;
+    padding: 0.5rem 0.55rem;
+    gap: 0.28rem;
+  }
+
+  .outcome-card.outcome-reveal .reveal-meta-row {
+    gap: 0.35rem 0.5rem;
+  }
+
+  .outcome-card.outcome-reveal .reveal-meta-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.06em;
+  }
+
+  .outcome-card.outcome-reveal .reveal-meta-value {
+    font-size: 0.82rem;
+  }
+
+  /* Timer: stack so countdown + blocks-left never force horizontal scroll */
+  .outcome-card.outcome-reveal .reveal-meta-row--timer {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.15rem;
+  }
+  .outcome-card.outcome-reveal .reveal-meta-row--timer .reveal-timer {
+    width: 100%;
+    text-align: left;
+    font-size: 1.05rem;
+  }
+  .outcome-card.outcome-reveal .reveal-timer-sub {
+    font-size: 0.68rem;
+  }
+
+  .outcome-card.outcome-reveal .reveal-wait-note {
+    margin: 0.4rem 0 0;
+    font-size: 0.78rem;
+  }
+
+  .outcome-card.outcome-reveal .outcome-actions {
+    margin-top: 0.2rem;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .outcome-card.outcome-reveal .outcome-continue-btn {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    min-height: 2.6rem;
+    font-size: 0.95rem !important;
+    padding: 0.45rem 0.75rem !important;
+  }
+
+  .outcome-card.outcome-reveal .outcome-hint {
+    margin-top: 0.25rem;
+    font-size: 0.62rem;
+    letter-spacing: 0.06em;
+    max-width: 100%;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
   }
 }

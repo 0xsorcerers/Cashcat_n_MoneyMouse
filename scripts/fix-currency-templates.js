@@ -9,28 +9,28 @@ const root = path.join(__dirname, "..");
 
   const pairs = [
     [
-      'setErrorMessage("You need ${blockchain.nativeSymbol} to pay the entry fee");',
-      "setErrorMessage(`You need ${blockchain.nativeSymbol} to pay the entry fee`);",
+      'setErrorMessage("You need ${blockchain.symbol} to pay the entry fee");',
+      "setErrorMessage(`You need ${blockchain.symbol} to pay the entry fee`);",
     ],
     [
-      'console.log("Initiating ${blockchain.symbol} approval...");',
-      "console.log(`Initiating $${blockchain.symbol} approval...`);",
+      'console.log("Initiating ${blockchain.tokenSymbol} approval...");',
+      "console.log(`Initiating $${blockchain.tokenSymbol} approval...`);",
     ],
     [
-      'setErrorMessage("Requesting ${blockchain.symbol} Approval...");',
-      "setErrorMessage(`Requesting $${blockchain.symbol} Approval...`);",
+      'setErrorMessage("Requesting ${blockchain.tokenSymbol} Approval...");',
+      "setErrorMessage(`Requesting $${blockchain.tokenSymbol} Approval...`);",
     ],
     [
-      'return "Not enough ${blockchain.nativeSymbol} sent for the entry fee.";',
-      "return `Not enough ${blockchain.nativeSymbol} sent for the entry fee.`;",
+      'return "Not enough ${blockchain.symbol} sent for the entry fee.";',
+      "return `Not enough ${blockchain.symbol} sent for the entry fee.`;",
     ],
     [
-      'return "Not enough ${blockchain.symbol} (or allowance) for the token fee.";',
-      "return `Not enough $${blockchain.symbol} (or allowance) for the token fee.`;",
+      'return "Not enough ${blockchain.tokenSymbol} (or allowance) for the token fee.";',
+      "return `Not enough $${blockchain.tokenSymbol} (or allowance) for the token fee.`;",
     ],
     [
-      'return "Not enough ${blockchain.nativeSymbol} in your wallet for gas + entry fee.";',
-      "return `Not enough ${blockchain.nativeSymbol} in your wallet for gas + entry fee.`;",
+      'return "Not enough ${blockchain.symbol} in your wallet for gas + entry fee.";',
+      "return `Not enough ${blockchain.symbol} in your wallet for gas + entry fee.`;",
     ],
   ];
 
@@ -45,8 +45,8 @@ const root = path.join(__dirname, "..");
 
   // token fee line should show $SYMBOL
   s = s.replace(
-    "Requires ${formatNumber(tokenCostEth)} ${blockchain.symbol} token fee",
-    "Requires ${formatNumber(tokenCostEth)} $${blockchain.symbol} token fee"
+    "Requires ${formatNumber(tokenCostEth)} ${blockchain.tokenSymbol} token fee",
+    "Requires ${formatNumber(tokenCostEth)} $${blockchain.tokenSymbol} token fee"
   );
 
   fs.writeFileSync(p, s);
@@ -59,12 +59,12 @@ const root = path.join(__dirname, "..");
 
   const pairs = [
     [
-      "return 'Insufficient ${blockchain.nativeSymbol} fee for mint.';",
-      "return `Insufficient ${blockchain.nativeSymbol} fee for mint.`;",
+      "return 'Insufficient ${blockchain.symbol} fee for mint.';",
+      "return `Insufficient ${blockchain.symbol} fee for mint.`;",
     ],
     [
-      "return 'Not enough ${blockchain.nativeSymbol} for fee + gas.';",
-      "return `Not enough ${blockchain.nativeSymbol} for fee + gas.`;",
+      "return 'Not enough ${blockchain.symbol} for fee + gas.';",
+      "return `Not enough ${blockchain.symbol} for fee + gas.`;",
     ],
   ];
 

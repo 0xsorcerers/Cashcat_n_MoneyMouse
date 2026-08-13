@@ -6,7 +6,7 @@ for (const f of ["src/Legends.js", "src/Mint.js"]) {
     if (!line.includes("${blockchain")) return;
     if (line.includes("`")) return; // template ok
     // JSX uses {blockchain...} without $
-    if (line.includes("{blockchain.nativeSymbol}") || line.includes("{blockchain.symbol}")) {
+    if (line.includes("{blockchain.symbol}") || line.includes("{blockchain.tokenSymbol}")) {
       // ok if not inside quotes with ${
     }
     // double/single quoted with ${ is broken
@@ -16,7 +16,7 @@ for (const f of ["src/Legends.js", "src/Mint.js"]) {
   });
   const ethUi = [];
   s.split("\n").forEach((line, i) => {
-    if (/\bETH\b/.test(line) && !/ethFee|ethCost|ethWei|formatEther|ethers|//|nativeSymbol|parseEther|ethBal|needEth|prizePot\.eth|feePreview\.eth|ethCostEth/.test(line)) {
+    if (/\bETH\b/.test(line) && !/ethFee|ethCost|ethWei|formatEther|ethers|//|tokenSymbol|parseEther|ethBal|needEth|prizePot\.eth|feePreview\.eth|ethCostEth/.test(line)) {
       ethUi.push(`${i + 1}: ${line.trim().slice(0, 100)}`);
     }
   });

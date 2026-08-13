@@ -73,9 +73,9 @@ const safeFormatEther = (wei) => {
 const KNOWN_ERROR_SELECTORS = {
   // ERC20InsufficientAllowance(address,uint256,uint256)
   '0xfb8f41b2':
-    `Token allowance too low — the mint contract could not pull $${blockchain.symbol}. Wait for the approve transaction to confirm, then try Mint again.`,
+    `Token allowance too low — the mint contract could not pull $${blockchain.tokenSymbol}. Wait for the approve transaction to confirm, then try Mint again.`,
   // ERC20InsufficientBalance(address,uint256,uint256)
-  '0xe450d38c': `Insufficient ${blockchain.symbol} balance for the token mint fee.`,
+  '0xe450d38c': `Insufficient ${blockchain.tokenSymbol} balance for the token mint fee.`,
 };
 
 const extractErrorSelector = (error) => {
@@ -120,15 +120,15 @@ const parseTxError = (error) => {
   if (/0xe450d38c|ERC20InsufficientBalance/i.test(s)) {
     return KNOWN_ERROR_SELECTORS['0xe450d38c'];
   }
-  if (/Insufficient fee/i.test(s)) return `Insufficient ${blockchain.nativeSymbol} fee for mint.`;
+  if (/Insufficient fee/i.test(s)) return `Insufficient ${blockchain.symbol} fee for mint.`;
   if (/Public Phase Has Not Yet Begun/i.test(s)) return 'Public mint phase has not started yet.';
   if (/Mint Not Live/i.test(s)) return 'Mint is not live yet.';
   if (/Paused Contract/i.test(s)) return 'Mint is paused.';
   if (/Max Exceeded/i.test(s)) return 'Max supply reached.';
   if (/user rejected|denied|User rejected|ACTION_REJECTED/i.test(s)) return 'Request cancelled.';
-  if (/insufficient funds|exceeds the balance/i.test(s)) return `Not enough ${blockchain.nativeSymbol} for fee + gas.`;
+  if (/insufficient funds|exceeds the balance/i.test(s)) return `Not enough ${blockchain.symbol} for fee + gas.`;
   if (/ERC20Insufficient|transfer amount exceeds|SafeERC20/i.test(s)) {
-    return `Not enough ${blockchain.symbol} (or allowance) for the token fee.`;
+    return `Not enough ${blockchain.tokenSymbol} (or allowance) for the token fee.`;
   }
   if (/Encoded error signature/i.test(s)) {
     return (
@@ -746,11 +746,11 @@ const Mint = ({ setComponent }) => {
 
       if (needEth > 0n && ethBalWei < needEth) {
         showError(
-          `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.nativeSymbol}` +
+          `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.symbol}` +
           (needTok > 0n
-            ? ` + ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}.`
+            ? ` + ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.tokenSymbol}.`
             : '.') +
-          ` Top up ${blockchain.nativeSymbol} and try again.`
+          ` Top up ${blockchain.symbol} and try again.`
         );
         return;
       }
@@ -760,9 +760,9 @@ const Mint = ({ setComponent }) => {
         const bal = await fetchTokenBalance(account.address);
         if (bal < needTok) {
           showError(
-            `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}` +
+            `Insufficient Funds to Mint. Requires ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.tokenSymbol}` +
             (needEth > 0n
-              ? ` + ${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.nativeSymbol}.`
+              ? ` + ${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.symbol}.`
               : '.') +
             ` Your balance is too low.`
           );
@@ -778,7 +778,7 @@ const Mint = ({ setComponent }) => {
         if (allowance < needTok) {
           setIsApproving(true);
           showInfo(
-            `Approve ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol} for the mint contract…`,
+            `Approve ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.tokenSymbol} for the mint contract…`,
             'info'
           );
           const approveTx = prepareContractCall({
@@ -802,18 +802,18 @@ const Mint = ({ setComponent }) => {
 
           if (allowance < needTok) {
             showError(
-              `Approval confirmed but allowance is still too low (${formatNumber(Number(safeFormatEther(allowance)))} < ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.symbol}). Wait a few seconds and tap Mint again.`
+              `Approval confirmed but allowance is still too low (${formatNumber(Number(safeFormatEther(allowance)))} < ${formatNumber(Number(safeFormatEther(needTok)))} ${blockchain.tokenSymbol}). Wait a few seconds and tap Mint again.`
             );
             return;
           }
-          showInfo(`${blockchain.symbol} approved. Submitting mint…`, 'success');
+          showInfo(`${blockchain.tokenSymbol} approved. Submitting mint…`, 'success');
         }
       }
 
       setIsMinting(true);
       showInfo(
         needEth > 0n
-          ? `Submitting paid mint (${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.nativeSymbol})…`
+          ? `Submitting paid mint (${formatNumber(Number(safeFormatEther(needEth)))} ${blockchain.symbol})…`
           : 'Submitting paid mint…',
         'info'
       );
@@ -911,12 +911,12 @@ const Mint = ({ setComponent }) => {
       <span className="countText countTextShrink">
         {ethFee != null ? formatNumber(ethFee) : '—'}
       </span>{' '}
-      {blockchain.nativeSymbol}
+      {blockchain.symbol}
       {' + '}
       <span className="countText countTextShrink">
         {tokenFee != null ? formatNumber(tokenFee) : '—'}
       </span>{' '}
-      {blockchain.symbol}
+      {blockchain.tokenSymbol}
     </>
   );
 
@@ -926,11 +926,11 @@ const Mint = ({ setComponent }) => {
       <span className="countText countTextTiny" style={{ fontSize: 'medium' }}>
         {ethFee != null ? formatNumber(ethFee) : '—'}
       </span>{' '}
-      {blockchain.nativeSymbol} +{' '}
+      {blockchain.symbol} +{' '}
       <span className="countText countTextTiny" style={{ fontSize: 'medium' }}>
         {tokenFee != null ? formatNumber(tokenFee) : '—'}
       </span>{' '}
-      {blockchain.symbol}
+      {blockchain.tokenSymbol}
     </>
   );
 
