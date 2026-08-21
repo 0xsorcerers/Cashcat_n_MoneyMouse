@@ -55,7 +55,7 @@ export const blockchain = {
   symbol: 'ETH',
   /** ERC20 token symbol (token fee / token pot). */
   tokenSymbol: 'CASHCAT',
-  address: '0x64f90C1F258768a35f7661e293AA7e2976DC567b', // CASHCATS NFT
+  address: '0xB5Fd5e8e9712123C895D6666bC7F42E9D18c19b9', // CASHCATS NFT
   chainId: 4663, 
   rpc: 'https://rpc.mainnet.chain.robinhood.com',
   blockExplorer: 'https://robinhoodchain.blockscout.com/',

@@ -272,8 +272,7 @@ contract CASHCATS is ERC721Enumerable, Ownable, ReentrancyGuard {
         paytoken.transferFrom(msg.sender,address(this), _cost);
     }
 
-    function setValues (uint256 _feeWei, uint256 _cyberFeeEther, uint256 _payId, uint256[] calldata _taxes, 
-    uint256 _startTime, uint256 _wlDuration, uint256[] calldata _mintLimits) external onlyCashcatDAO() {
+    function setValues (uint256 _feeWei, uint256 _cyberFeeEther, uint256 _payId, uint256[] calldata _taxes, uint256 _startTime, uint256 _wlDuration, uint256[] calldata _mintLimits) external onlyCashcatDAO() {
         fee = _feeWei;
         cyberFee = _cyberFeeEther * 1 ether;
         payId = _payId;
@@ -445,10 +444,7 @@ contract CASHCATS is ERC721Enumerable, Ownable, ReentrancyGuard {
     /// @dev tokenFee is the ERC20 mint cost (cyberFee storage). ethFee is native `fee`.
     ///      remAir* are free-mint slots still available to `player` (0 if not whitelisted).
     ///      canFreeMint is true when whitelist path would succeed right now (limits + live).
-    function getMintData(address player)
-        external
-        view
-        returns (
+    function getMintData(address player) external view returns (
             uint256 ethFee,
             uint256 tokenFee,
             bool isPaused,
