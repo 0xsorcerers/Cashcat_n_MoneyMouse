@@ -27,12 +27,6 @@ import metadata from "../assets/docs/metadata_search_query.json";
 
 import logo from "../assets/images/logo.webp";
 import baselogo from "../assets/images/baselogo.webp";
-import air1 from "../assets/images/air1-image.webp";
-import air2 from "../assets/images/air2-image.webp";
-import air3 from "../assets/images/air3-image.webp";
-import air4 from "../assets/images/air4-image.webp";
-import air5 from "../assets/images/air5-image.webp";
-import air6 from "../assets/images/air6-image.webp";
 import blueHalftone from "../assets/images/blue_halftone.webp";
 import greenHalftone from "../assets/images/green_halftone.webp";
 import redHalftone from "../assets/images/red_halftone.webp";
@@ -231,6 +225,7 @@ import mothvslamp from '../assets/images/partners/mothvslamp.webp';
 const documents = {
   Metadata: metadata,
 };
+let air1,air2,air3,air4,air5,air6;
 
 /** Mint air-lane faces: distinct Cashcat breeds (not the old cake icons). */
 const visualEffects = {

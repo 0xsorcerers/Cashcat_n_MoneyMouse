@@ -173,17 +173,39 @@ body, html {
   z-index: 100;
 }
 
-/* Set the style for the scrollbar */
+/* Global slim scrollbar styling with theme colors */
 ::-webkit-scrollbar {
-  width: 0.6vw;
+  width: 6px;
+  height: 6px;
 }
 
-/* Set the style for the thumb of the scrollbar */
+::-webkit-scrollbar-track {
+  background: rgba(11, 12, 16, 0.4);
+  border-radius: 3px;
+}
+
 ::-webkit-scrollbar-thumb {
-  background-color: cyan;
-  border-radius: 10px;
+  background: linear-gradient(180deg, #c9a227, #f5c542, #ffe27a);
+  border-radius: 3px;
+  border: 1px solid rgba(80, 50, 0, 0.3);
   cursor: grab;
-  opacity: 0.8;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #f5c542, #ffe27a, #fff3b0);
+  border-color: rgba(80, 50, 0, 0.5);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: linear-gradient(180deg, #ffe27a, #fff3b0, #ffe27a);
+  cursor: grabbing;
+}
+
+/* Firefox scrollbar support */
+html, body, #root {
+  scrollbar-width: thin;
+  scrollbar-color: #f5c542 rgba(11, 12, 16, 0.4);
 }
 
 .remarks {
@@ -1105,9 +1127,7 @@ body, html {
     z-index: -1;
     pointer-events: none;
   }
-  ::-webkit-scrollbar {
-    width: 2vw;
-  }
+
   .mobile-nav {
     display: block;
   }

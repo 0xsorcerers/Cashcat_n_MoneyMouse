@@ -111,7 +111,9 @@ function App () {
       ];
       
       allImages.forEach(src => {
-        new Image().src = typeof src === 'string' ? src : src.default;
+        if (src) {
+          new Image().src = typeof src === 'string' ? src : (src.default || src);
+        }
       });
     };
 

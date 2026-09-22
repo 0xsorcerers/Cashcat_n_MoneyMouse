@@ -863,9 +863,9 @@ const Legends = ({setComponent}) => {
         try {
           const eraKey = data.lastWinEra || Math.max(1, data.currentEra - 1);
           const w = await legendaryContract.pastwinners(eraKey);
-          const stored = w?.paymentType ?? w?.[4];
-          if (stored !== undefined && stored !== null) {
-            winPaymentType = asPaymentType(stored);
+          const hasPaymentTypeField = w?.paymentType !== undefined && w?.paymentType !== null;
+          if (hasPaymentTypeField) {
+            winPaymentType = asPaymentType(w.paymentType);
           }
         } catch (_) { /* older ABI / missing field */ }
         setLastWinner({
@@ -1421,7 +1421,7 @@ const Legends = ({setComponent}) => {
 
   /**
    * Timeline of paymentType changes from PaymentTypeSet events.
-   * Used when pastwinners rows lack a stored paymentType (pre-upgrade seasons).
+   * Used when pastwinners rows lack a stored paymentType field (old contract versions).
    * @returns {Promise<{ timestamp: number, paymentType: boolean }[]>}
    */
   const loadPaymentTypeTimeline = async () => {
@@ -1473,7 +1473,9 @@ const Legends = ({setComponent}) => {
   /**
    * Load past season winners from legends contract.pastwinners(era).
    * Completed seasons are 1 .. currentEra-1 (era increments on each pot win).
-   * Each row includes paymentType + symbol the winner was paid in.
+   * Handles both old (4-field) and new (5-field) contract versions:
+   * - Old contracts: use PaymentTypeSet event timeline or current paymentType
+   * - New contracts: use stored paymentType field from WinnersList struct
    */
   const loadSeasonBoard = async () => {
     setSeasonBoardLoading(true);
@@ -1517,15 +1519,20 @@ const Legends = ({setComponent}) => {
             if (!winner || winner === ethers.ZeroAddress) return null;
             const amt = Number(safeFormatEther(amountWei));
 
-            // Prefer on-chain stored paymentType (new deployments); else event timeline; else current
+            // Handle both old (4-field) and new (5-field) contract versions
             let paymentType;
-            const stored = w?.paymentType ?? w?.[4];
-            if (stored !== undefined && stored !== null) {
-              paymentType = asPaymentType(stored);
-            } else if (ts > 0) {
-              paymentType = paymentTypeAtTimestamp(timeline, ts);
+            const hasPaymentTypeField = w?.paymentType !== undefined && w?.paymentType !== null;
+            
+            if (hasPaymentTypeField) {
+              // New contract with stored paymentType
+              paymentType = asPaymentType(w.paymentType);
             } else {
-              paymentType = currentPt;
+              // Old contract (4 fields) - use timeline or current paymentType
+              if (ts > 0) {
+                paymentType = paymentTypeAtTimestamp(timeline, ts);
+              } else {
+                paymentType = currentPt;
+              }
             }
 
             return {
@@ -2275,14 +2282,15 @@ const Legends = ({setComponent}) => {
         try {
           const w = await legendaryContract.pastwinners(prevEra);
           if (cancelled) return;
-          const stored = w?.paymentType ?? w?.[4];
-          if (stored === undefined || stored === null) return;
-          const pt = asPaymentType(stored);
-          setLastWinner((prev) =>
-            prev?.address
-              ? { ...prev, paymentType: pt, symbol: symbolForPaymentType(pt) }
-              : prev
-          );
+          const hasPaymentTypeField = w?.paymentType !== undefined && w?.paymentType !== null;
+          if (hasPaymentTypeField) {
+            const pt = asPaymentType(w.paymentType);
+            setLastWinner((prev) =>
+              prev?.address
+                ? { ...prev, paymentType: pt, symbol: symbolForPaymentType(pt) }
+                : prev
+            );
+          }
         } catch (_) { /* ignore */ }
       })();
       return () => { cancelled = true; };
@@ -2299,10 +2307,10 @@ const Legends = ({setComponent}) => {
         if (!winner || winner === ethers.ZeroAddress) return;
         const pot = Number(safeFormatEther(w?.amount ?? w?.[2] ?? 0n));
         const ts = Number(w?.timestamp ?? w?.[3] ?? 0) || 0;
-        const stored = w?.paymentType ?? w?.[4];
+        const hasPaymentTypeField = w?.paymentType !== undefined && w?.paymentType !== null;
         const pt =
-          stored !== undefined && stored !== null
-            ? asPaymentType(stored)
+          hasPaymentTypeField
+            ? asPaymentType(w.paymentType)
             : asPaymentType(gameData?.paymentType);
         setLastWinner({
           address: winner,
@@ -2536,7 +2544,7 @@ const Legends = ({setComponent}) => {
                 className="nftImage"
                 draggable={false}
               />
-              <span className="nft-click-me">click me</span>
+              <span className="nft-click-me">Spawn a cat</span>
             </button>
           )}
         </div>
@@ -2728,7 +2736,7 @@ const Legends = ({setComponent}) => {
                   alt={`Cashcat #${nft}`}
                   draggable={false}
                 />
-                <span className="nft-flip-hint">click me</span>
+                <span className="nft-flip-hint">flip me</span>
               </div>
               <div className="nft-flip-face nft-flip-back">
                 <div className="nft-info">
@@ -2761,7 +2769,7 @@ const Legends = ({setComponent}) => {
                       Metadata still loading or unavailable for this edition.
                     </p>
                   )}
-                  <span className="nft-flip-hint">click me</span>
+                  <span className="nft-flip-hint">flip me</span>
                 </div>
               </div>
             </div>
@@ -3143,7 +3151,7 @@ const Legends = ({setComponent}) => {
                             {", but you hunted down "}
                             <span className="outcome-hl">{huntedName}</span>.
                             <div className="results-loss-footnote">
-                              Names only match when both on-chain draws are equal —
+                              A campaign is only a success when both on-chain draws are equal —
                               this entry missed, so its fee stays in the season pot.
                             </div>
                           </div>
@@ -3246,7 +3254,7 @@ const Legends = ({setComponent}) => {
                        <th>Season</th>
                        <th>Winner</th>
                        <th>Pot</th>
-                       <th>Paid in</th>
+                       {/* <th>Paid in</th> */}
                        <th>When</th>
                      </tr>
                    </thead>
@@ -3260,9 +3268,9 @@ const Legends = ({setComponent}) => {
                          <td className="season-board-pot">
                            {safeNum(row.amount)} {row.symbol || potSymbol}
                          </td>
-                         <td className="season-board-paid" title={row.paymentType ? "Token pot" : "Native pot"}>
+                         {/* <td className="season-board-paid" title={row.paymentType ? "Token pot" : "Native pot"}>
                            {row.symbol || potSymbol}
-                         </td>
+                         </td> */}
                          <td className="season-board-when">{row.timestamp}</td>
                        </tr>
                      ))}

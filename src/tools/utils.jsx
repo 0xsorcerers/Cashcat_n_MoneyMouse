@@ -196,7 +196,7 @@ export function Connector () {
             address: blockchain.cashcat_contract_address,
             name: blockchain.name,
             symbol: blockchain.tokenSymbol,
-            icon: '/logo.png',
+            icon: '/cashcatlogo.jpg',
           },
           // {
           //   address: blockchain.partner1_contract_address,
@@ -215,7 +215,7 @@ export function Connector () {
           welcomeScreen: {
             title: "Cashcats 'n' MoneyMice!",
             subtitle:
-              "...unleashing kickass GambleFi and Yield on Cashcat Chain.",
+              "...unleashing kickass GambleFi and Yield on the 4663.",
             img: {
               src: '/logo512.webp',
               width: 250,
